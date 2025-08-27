@@ -32,19 +32,29 @@ df_alocacao = df_alocacao.rename(columns={
     "PercentualIdeal": "ParticipacaoIdeal"
 })
 
-# 🔥 Converter texto em número
-for col in ["ParticipacaoAtual", "ParticipacaoIdeal"]:
-    if col in df_carteira.columns:
-        df_carteira[col] = (
-            df_carteira[col].astype(str).str.replace("%","").str.replace(",", ".")
-        )
-    if col in df_alocacao.columns:
-        df_alocacao[col] = (
-            df_alocacao[col].astype(str).str.replace("%","").str.replace(",", ".")
-        )
+# 🔥 Converter texto em número (modo seguro)
+if "ParticipacaoAtual" in df_carteira.columns:
+    df_carteira["ParticipacaoAtual"] = (
+        df_carteira["ParticipacaoAtual"].astype(str)
+        .str.replace("%", "")
+        .str.replace(",", ".")
+    )
+    df_carteira["ParticipacaoAtual"] = pd.to_numeric(df_carteira["ParticipacaoAtual"], errors="coerce")
+else:
+    st.error("❌ Coluna 'ParticipacaoAtual' não encontrada na aba Carteira.")
+    st.stop()
 
-df_carteira["ParticipacaoAtual"] = pd.to_numeric(df_carteira["ParticipacaoAtual"], errors="coerce")
-df_alocacao["ParticipacaoIdeal"] = pd.to_numeric(df_alocacao["ParticipacaoIdeal"], errors="coerce")
+if "ParticipacaoIdeal" in df_alocacao.columns:
+    df_alocacao["ParticipacaoIdeal"] = (
+        df_alocacao["ParticipacaoIdeal"].astype(str)
+        .str.replace("%", "")
+        .str.replace(",", ".")
+    )
+    df_alocacao["ParticipacaoIdeal"] = pd.to_numeric(df_alocacao["ParticipacaoIdeal"], errors="coerce")
+else:
+    st.error("❌ Coluna 'ParticipacaoIdeal' não encontrada na aba Alocacao.")
+    st.stop()
+
 
 # ============================
 # Consolidar ativos repetidos
@@ -80,3 +90,4 @@ for _, row in df.iterrows():
         st.write(f"🔴 Reduzir posição em **{row['Ativo']}** ({row['Diferenca']:.2f}%)")
     else:
         st.write(f"✅ {row['Ativo']} já está na alocação ideal.")
+
