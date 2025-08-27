@@ -36,27 +36,31 @@ df_alocacao = df_alocacao.rename(columns={
 for col in ["ParticipacaoAtual", "ParticipacaoIdeal"]:
     if col in df_carteira.columns:
         df_carteira[col] = (
-            df_carteira[col]
-            .astype(str)              # garante string
-            .str.replace("%", "")     # remove símbolo de %
-            .str.replace(",", ".")    # troca vírgula por ponto
+            df_carteira[col].astype(str).str.replace("%","").str.replace(",", ".")
         )
     if col in df_alocacao.columns:
         df_alocacao[col] = (
-            df_alocacao[col]
-            .astype(str)
-            .str.replace("%", "")
-            .str.replace(",", ".")
+            df_alocacao[col].astype(str).str.replace("%","").str.replace(",", ".")
         )
 
-# converter de fato em float
 df_carteira["ParticipacaoAtual"] = pd.to_numeric(df_carteira["ParticipacaoAtual"], errors="coerce")
 df_alocacao["ParticipacaoIdeal"] = pd.to_numeric(df_alocacao["ParticipacaoIdeal"], errors="coerce")
 
-# Juntar os dois
+# ============================
+# Consolidar ativos repetidos
+# ============================
 df = pd.merge(df_carteira, df_alocacao, on="Ativo", how="outer")
 
-# Calcular diferença
+df = df.groupby("Ativo", as_index=False).agg({
+    "Data": "min",
+    "ValorAplicado": "sum",
+    "SaldoBruto": "sum",
+    "Rentabilidade": "mean",
+    "ParticipacaoAtual": "sum",
+    "ParticipacaoIdeal": "mean"
+})
+
+# Recalcular diferença
 df["Diferenca"] = df["ParticipacaoIdeal"] - df["ParticipacaoAtual"]
 
 # ============================
@@ -64,9 +68,10 @@ df["Diferenca"] = df["ParticipacaoIdeal"] - df["ParticipacaoAtual"]
 # ============================
 st.title("📊 Gestão de Carteira")
 
-st.subheader("Carteira Atual vs Alocação Ideal")
+st.subheader("Carteira atual vs Alocação ideal (Consolidada)")
 st.dataframe(df, use_container_width=True)
 
+# Resumo com cores
 st.subheader("Resumo")
 for _, row in df.iterrows():
     if row["Diferenca"] > 0:
@@ -75,5 +80,3 @@ for _, row in df.iterrows():
         st.write(f"🔴 Reduzir posição em **{row['Ativo']}** ({row['Diferenca']:.2f}%)")
     else:
         st.write(f"✅ {row['Ativo']} já está na alocação ideal.")
-
-
