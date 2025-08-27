@@ -32,6 +32,27 @@ df_alocacao = df_alocacao.rename(columns={
     "PercentualIdeal": "ParticipacaoIdeal"
 })
 
+# 🔥 Converter texto em número
+for col in ["ParticipacaoAtual", "ParticipacaoIdeal"]:
+    if col in df_carteira.columns:
+        df_carteira[col] = (
+            df_carteira[col]
+            .astype(str)              # garante string
+            .str.replace("%", "")     # remove símbolo de %
+            .str.replace(",", ".")    # troca vírgula por ponto
+        )
+    if col in df_alocacao.columns:
+        df_alocacao[col] = (
+            df_alocacao[col]
+            .astype(str)
+            .str.replace("%", "")
+            .str.replace(",", ".")
+        )
+
+# converter de fato em float
+df_carteira["ParticipacaoAtual"] = pd.to_numeric(df_carteira["ParticipacaoAtual"], errors="coerce")
+df_alocacao["ParticipacaoIdeal"] = pd.to_numeric(df_alocacao["ParticipacaoIdeal"], errors="coerce")
+
 # Juntar os dois
 df = pd.merge(df_carteira, df_alocacao, on="Ativo", how="outer")
 
