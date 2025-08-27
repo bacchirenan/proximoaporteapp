@@ -70,8 +70,10 @@ st.dataframe(df, use_container_width=True)
 st.subheader("Resumo")
 for _, row in df.iterrows():
     if row["Diferenca"] > 0:
-        st.write(f"➡️ Comprar mais de **{row['Ativo']}** (+{row['Diferenca']:.2f}%)")
+        st.write(f"🔵 Comprar mais de **{row['Ativo']}** (+{row['Diferenca']:.2f}%)")
     elif row["Diferenca"] < 0:
-        st.write(f"⬅️ Reduzir posição em **{row['Ativo']}** ({row['Diferenca']:.2f}%)")
+        st.write(f"🔴 Reduzir posição em **{row['Ativo']}** ({row['Diferenca']:.2f}%)")
     else:
         st.write(f"✅ {row['Ativo']} já está na alocação ideal.")
+
+
