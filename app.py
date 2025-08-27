@@ -3,6 +3,10 @@ import gspread
 from google.oauth2.service_account import Credentials
 import pandas as pd
 
+import streamlit as st
+
+st.write("Service account email:", st.secrets["gcp_service_account"]["client_email"])
+
 # ==== Carrega credenciais do secrets.toml ====
 service_account_info = st.secrets["gcp_service_account"]
 
@@ -43,3 +47,4 @@ if 'Produto' in df_carteira.columns and 'Ativo' in df_alocacao.columns:
     merged = pd.merge(df_carteira, df_alocacao, left_on="Produto", right_on="Ativo", how="left")
     st.subheader("Carteira com Alocação Ideal")
     st.dataframe(merged)
+
