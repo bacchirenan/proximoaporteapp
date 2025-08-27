@@ -20,11 +20,21 @@ except Exception as e:
     st.stop()
 
 # ============================
-# Processar dados
+# Mostrar colunas para conferência
+# ============================
+st.write("Colunas Carteira:", df_carteira.columns.tolist())
+st.write("Colunas Alocacao:", df_alocacao.columns.tolist())
+
+# ============================
+# Renomear colunas para nomes consistentes
 # ============================
 df_carteira = df_carteira.rename(columns={
     "Produto": "Ativo",
-    "Participação na carteira (%)": "ParticipacaoAtual"
+    "Participação na carteira (%)": "ParticipacaoAtual",
+    "Valor Aplicado": "ValorAplicado",
+    "Saldo Bruto": "SaldoBruto",
+    "Rentabilidade (%)": "Rentabilidade",
+    "Data da Alocacao": "Data"
 })
 
 df_alocacao = df_alocacao.rename(columns={
@@ -32,7 +42,9 @@ df_alocacao = df_alocacao.rename(columns={
     "PercentualIdeal": "ParticipacaoIdeal"
 })
 
-# 🔥 Converter texto em número (modo seguro)
+# ============================
+# Converter texto em número (modo seguro)
+# ============================
 if "ParticipacaoAtual" in df_carteira.columns:
     df_carteira["ParticipacaoAtual"] = (
         df_carteira["ParticipacaoAtual"].astype(str)
@@ -55,19 +67,21 @@ else:
     st.error("❌ Coluna 'ParticipacaoIdeal' não encontrada na aba Alocacao.")
     st.stop()
 
+# ============================
+# Merge Carteira x Alocacao
+# ============================
+df = pd.merge(df_carteira, df_alocacao, on="Ativo", how="outer")
 
 # ============================
 # Consolidar ativos repetidos
 # ============================
-df = pd.merge(df_carteira, df_alocacao, on="Ativo", how="outer")
-
 df = df.groupby("Ativo", as_index=False).agg({
-    "Data": "min",
-    "ValorAplicado": "sum",
-    "SaldoBruto": "sum",
-    "Rentabilidade": "mean",
-    "ParticipacaoAtual": "sum",
-    "ParticipacaoIdeal": "mean"
+    "Data": "min",                  # primeira alocação
+    "ValorAplicado": "sum",         # soma de valores aplicados
+    "SaldoBruto": "sum",            # soma de saldos brutos
+    "Rentabilidade": "mean",        # média da rentabilidade
+    "ParticipacaoAtual": "sum",     # soma da participação atual
+    "ParticipacaoIdeal": "mean"     # média da alocação ideal
 })
 
 # Recalcular diferença
@@ -90,4 +104,3 @@ for _, row in df.iterrows():
         st.write(f"🔴 Reduzir posição em **{row['Ativo']}** ({row['Diferenca']:.2f}%)")
     else:
         st.write(f"✅ {row['Ativo']} já está na alocação ideal.")
-
