@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import re
+import yfinance as yf
 
 st.set_page_config(page_title="Carteira vs Alocação", layout="wide")
 
@@ -70,10 +71,22 @@ def icone_diferenca(x):
 
 df["Status"] = df["Diferenca"].apply(icone_diferenca)
 
-# Mostrar tabela
+# Mostrar tabela completa
 df_display = df[["Produto", "ValorAplicado", "SaldoBruto", "ParticipacaoAtual", "ParticipacaoIdeal", "Diferenca", "Status"]]
 st.title("📊 Carteira vs Alocação Ideal")
 st.dataframe(df_display, use_container_width=True)
+
+# ------------------------------
+# Função para pegar preço atual via Yahoo Finance
+# ------------------------------
+@st.cache_data(ttl=600)
+def preco_atual(ticker):
+    try:
+        ativo = yf.Ticker(ticker)
+        preco = ativo.history(period="1d")["Close"].iloc[-1]
+        return preco
+    except:
+        return None
 
 # ------------------------------
 # Caixa de aporte
@@ -95,19 +108,20 @@ if aporte > 0:
         # Ordenar do maior para o menor diferença
         df_comprar = df_comprar.sort_values(by="Diferenca", ascending=False)
         
+        # Buscar preço atual de cada ativo
+        df_comprar["ValorAtual"] = df_comprar["Produto"].apply(preco_atual)
+        
         # Calcular total de diferenças
         total_diferenca = df_comprar["Diferenca"].sum()
         # Distribuir aporte proporcionalmente
         df_comprar["AporteRecomendado"] = df_comprar["Diferenca"] / total_diferenca * aporte
         
         # Criar a tabela final de recomendações
-        df_recomendacao = df_comprar[["Produto", "SaldoBruto", "Diferenca", "AporteRecomendado"]].copy()
-        df_recomendacao = df_recomendacao.rename(columns={"SaldoBruto": "ValorAtual"})
+        df_recomendacao = df_comprar[["Produto", "ValorAtual", "Diferenca", "AporteRecomendado"]]
         
         st.write("💡 Recomendação de aporte proporcional aos ativos mais descontados (🔵 Comprar mais):")
         st.dataframe(df_recomendacao, use_container_width=True)
     else:
         st.write("Todos os ativos estão na alocação ideal. Nenhum aporte necessário.")
-
-
-
+else:
+    st.write("Informe o valor do aporte para calcular a recomendação.")
