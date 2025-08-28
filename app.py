@@ -107,7 +107,10 @@ def status(row):
 
 df["Status"] = df.apply(status, axis=1)
 
-# Função para buscar valor atual na internet
+# Criar coluna Ticker para yfinance (ativos brasileiros terminam com .SA)
+df["TickerYF"] = df["Produto"].apply(lambda x: f"{x}.SA" if not x.endswith(".SA") else x)
+
+# Função para buscar valor atual
 def get_valor_atual(ticker):
     try:
         ticker_data = yf.Ticker(ticker)
@@ -116,12 +119,13 @@ def get_valor_atual(ticker):
     except:
         return None
 
-df["ValorAtual"] = df["Produto"].apply(get_valor_atual)
+# Aplicar a função
+df["ValorAtual"] = df["TickerYF"].apply(get_valor_atual)
 
-# Substituir NaN por 0 e formatar valores monetários
+# Formatar valores monetários
 df["ValorAplicado"] = df["ValorAplicado"].fillna(0).map(lambda x: f"R${x:,.2f}")
 df["SaldoBruto"] = df["SaldoBruto"].fillna(0).map(lambda x: f"R${x:,.2f}")
-df["ValorAtual"] = df["ValorAtual"].fillna(0).map(lambda x: f"R${x:,.2f}")
+df["ValorAtual"] = df["ValorAtual"].map(lambda x: f"R${x:,.2f}" if pd.notna(x) else "N/A")
 
 # Formatar Participações como porcentagem
 df["ParticipacaoAtual"] = df["ParticipacaoAtual"].map(lambda x: f"{x:.2f}%" if pd.notna(x) else "N/A")
@@ -129,7 +133,6 @@ df["ParticipacaoIdeal"] = df["ParticipacaoIdeal"].map(lambda x: f"{x:.2f}%" if p
 
 # Exibir tabela principal
 st.subheader("Carteira Atual vs Alocação Ideal")
-
 df_exibir = df.rename(columns={
     "ValorAplicado": "Valor Aplicado",
     "SaldoBruto": "Saldo Bruto",
