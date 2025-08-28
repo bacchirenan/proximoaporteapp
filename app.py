@@ -17,55 +17,35 @@ except Exception as e:
     st.error("Erro ao carregar os dados da planilha. Verifique o link e permissões.")
     st.stop()
 
-# Padronizar nomes de colunas removendo espaços extras
+# Padronizar colunas
 df_carteira.columns = df_carteira.columns.str.strip()
 df_alocacao.columns = df_alocacao.columns.str.strip()
 
-# Padronizar nomes de ativos para filtragem futura
+# Padronizar nomes de ativos
 df_carteira["Produto"] = df_carteira["Produto"].str.strip().str.upper()
 df_alocacao["Ativo"] = df_alocacao["Ativo"].str.strip().str.upper()
 
-# Limpar e converter a coluna "Valor aplicado"
-df_carteira["Valor aplicado"] = (
-    df_carteira["Valor aplicado"]
-    .astype(str)
-    .str.replace("R$", "", regex=False)
-    .str.replace(".", "", regex=False)
-    .str.replace(",", ".", regex=False)
-    .str.strip()
-)
-df_carteira["Valor aplicado"] = pd.to_numeric(df_carteira["Valor aplicado"], errors="coerce")
-
-# Limpar e converter a coluna "Saldo bruto"
-df_carteira["Saldo bruto"] = (
-    df_carteira["Saldo bruto"]
-    .astype(str)
-    .str.replace("R$", "", regex=False)
-    .str.replace(".", "", regex=False)
-    .str.replace(",", ".", regex=False)
-    .str.strip()
-)
-df_carteira["Saldo bruto"] = pd.to_numeric(df_carteira["Saldo bruto"], errors="coerce")
-
-# Converter outras colunas numéricas da Carteira
-numericas = ["Rentabilidade (%)", "Participação na carteira (%)"]
-for col in numericas:
-    df_carteira[col] = pd.to_numeric(
-        df_carteira[col].astype(str).str.replace(",", ".").str.strip(),
-        errors="coerce"
+# Converter colunas monetárias
+for col in ["Valor aplicado", "Saldo bruto"]:
+    df_carteira[col] = (
+        df_carteira[col].astype(str)
+        .str.replace("R$", "", regex=False)
+        .str.replace(".", "", regex=False)
+        .str.replace(",", ".", regex=False)
+        .str.strip()
     )
+    df_carteira[col] = pd.to_numeric(df_carteira[col], errors="coerce")
 
-# Limpar e converter a coluna "PercentualIdeal" da Alocacao
-df_alocacao["PercentualIdeal"] = (
-    df_alocacao["PercentualIdeal"]
-    .astype(str)
-    .str.replace("%", "", regex=False)
-    .str.replace(",", ".", regex=False)
-    .str.strip()
+# Converter outras colunas numéricas
+for col in ["Rentabilidade (%)", "Participação na carteira (%)"]:
+    df_carteira[col] = pd.to_numeric(df_carteira[col].astype(str).str.replace(",", "."), errors="coerce")
+
+# Converter coluna PercentualIdeal
+df_alocacao["PercentualIdeal"] = pd.to_numeric(
+    df_alocacao["PercentualIdeal"].astype(str).str.replace(",", "."), errors="coerce"
 )
-df_alocacao["PercentualIdeal"] = pd.to_numeric(df_alocacao["PercentualIdeal"], errors="coerce")
 
-# Renomear coluna para padronização
+# Renomear colunas
 df_alocacao.rename(columns={"PercentualIdeal": "ParticipacaoIdeal", "Ativo": "Produto"}, inplace=True)
 
 # Agrupar Carteira por Produto
@@ -76,7 +56,6 @@ df_carteira = df_carteira.groupby("Produto", as_index=False).agg({
     "Participação na carteira (%)": "sum"
 })
 
-# Renomear colunas da Carteira
 df_carteira.rename(columns={
     "Valor aplicado": "ValorAplicado",
     "Saldo bruto": "SaldoBruto",
@@ -87,14 +66,14 @@ df_carteira.rename(columns={
 # Merge Carteira + Alocacao
 df = pd.merge(df_carteira, df_alocacao, on="Produto", how="left")
 
-# FILTRO DEFINITIVO: ativos que não devem aparecer
+# FILTRO DEFINITIVO
 ativos_excluir = ["BRCR11", "BTHF11", "RBFF11", "RBRD11", "RECR11", "TAEE4"]
 df = df[~df["Produto"].isin(ativos_excluir)]
 
 # Calcular diferença
 df["Diferenca"] = df["ParticipacaoIdeal"] - df["ParticipacaoAtual"]
 
-# Status com bolinhas coloridas
+# Status com bolinhas
 def status(row):
     if pd.isna(row["Diferenca"]):
         return "—"
@@ -107,7 +86,7 @@ def status(row):
 
 df["Status"] = df.apply(status, axis=1)
 
-# Mapeamento de tickers para yfinance
+# Mapeamento completo de tickers para yfinance
 ticker_map = {
     "AAPL": "AAPL",
     "BBDC3": "BBDC3.SA",
@@ -152,20 +131,19 @@ ticker_map = {
 
 df["TickerYF"] = df["Produto"].map(ticker_map)
 
-# Função para buscar valor atual
+# Buscar valor atual
 def get_valor_atual(ticker):
     if pd.isna(ticker):
         return None
     try:
-        price = yf.Ticker(ticker).history(period="1d")["Close"].iloc[-1]
-        return price
+        return yf.Ticker(ticker).history(period="1d")["Close"].iloc[-1]
     except:
         return None
 
 df["ValorAtual"] = df["TickerYF"].apply(get_valor_atual)
 df["ValorAtual"] = df["ValorAtual"].map(lambda x: f"R${x:,.2f}" if pd.notna(x) else "N/A")
 
-# Formatar valores monetários e participações
+# Formatar valores e participações
 df["ValorAplicado"] = df["ValorAplicado"].fillna(0).map(lambda x: f"R${x:,.2f}")
 df["SaldoBruto"] = df["SaldoBruto"].fillna(0).map(lambda x: f"R${x:,.2f}")
 df["ParticipacaoAtual"] = df["ParticipacaoAtual"].map(lambda x: f"{x:.2f}%" if pd.notna(x) else "N/A")
@@ -174,32 +152,4 @@ df["ParticipacaoIdeal"] = df["ParticipacaoIdeal"].map(lambda x: f"{x:.2f}%" if p
 # Exibir tabela principal
 st.subheader("Carteira Atual vs Alocação Ideal")
 df_exibir = df.rename(columns={
-    "ValorAplicado": "Valor Aplicado",
-    "SaldoBruto": "Saldo Bruto",
-    "ParticipacaoAtual": "Participação Atual",
-    "ParticipacaoIdeal": "Participação Ideal"
-})
-st.dataframe(df_exibir[["Produto", "Valor Aplicado", "Saldo Bruto",
-                        "Participação Atual", "Participação Ideal",
-                        "Diferenca", "Status", "ValorAtual"]])
-
-# Caixa de entrada para aporte
-aporte_str = st.text_input("Qual o valor do aporte?", "0.00")
-try:
-    aporte = float(aporte_str.replace(",", "."))
-except ValueError:
-    aporte = 0.0
-
-if aporte > 0:
-    df_comprar = df[df["Status"].str.contains("Comprar mais")].copy()
-    total_diff = df_comprar["Diferenca"].sum()
-    if total_diff > 0:
-        df_comprar["Aporte Recomendado"] = (df_comprar["Diferenca"] / total_diff) * aporte
-    else:
-        df_comprar["Aporte Recomendado"] = 0
-
-    df_comprar["Aporte Recomendado"] = df_comprar["Aporte Recomendado"].map("R${:,.2f}".format)
-    df_comprar.sort_values("Diferenca", ascending=False, inplace=True)
-
-    st.subheader("Recomendações de Aporte")
-    st.dataframe(df_comprar[["Produto", "ValorAtual", "Aporte Recomendado", "Diferenca"]])
+    "ValorAplicado": "Va
