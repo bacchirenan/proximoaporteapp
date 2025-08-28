@@ -21,6 +21,10 @@ except Exception as e:
 df_carteira.columns = df_carteira.columns.str.strip()
 df_alocacao.columns = df_alocacao.columns.str.strip()
 
+# Padronizar nomes de ativos para filtragem futura
+df_carteira["Produto"] = df_carteira["Produto"].str.strip().str.upper()
+df_alocacao["Ativo"] = df_alocacao["Ativo"].str.strip().str.upper()
+
 # Limpar e converter a coluna "Valor aplicado"
 df_carteira["Valor aplicado"] = (
     df_carteira["Valor aplicado"]
@@ -83,13 +87,8 @@ df_carteira.rename(columns={
 # Merge Carteira + Alocacao
 df = pd.merge(df_carteira, df_alocacao, on="Produto", how="left")
 
-# Padronizar nomes de ativos para filtragem
-df["Produto"] = df["Produto"].str.strip().str.upper()
-
-# Lista de ativos a excluir
+# FILTRO DEFINITIVO: ativos que não devem aparecer
 ativos_excluir = ["BRCR11", "BTHF11", "RBFF11", "RBRD11", "RECR11", "TAEE4"]
-
-# Filtrar ativos indesejados
 df = df[~df["Produto"].isin(ativos_excluir)]
 
 # Calcular diferença e status
@@ -130,7 +129,6 @@ df["ParticipacaoIdeal"] = df["ParticipacaoIdeal"].map(lambda x: f"{x:.2f}%" if p
 # Exibir tabela principal
 st.subheader("Carteira Atual vs Alocação Ideal")
 
-# Renomear colunas para exibição final
 df_exibir = df.rename(columns={
     "ValorAplicado": "Valor Aplicado",
     "SaldoBruto": "Saldo Bruto",
@@ -150,7 +148,6 @@ except ValueError:
     aporte = 0.0
 
 if aporte > 0:
-    # Considerar apenas ativos para comprar mais
     df_comprar = df[df["Status"] == "Comprar mais"].copy()
     total_diff = df_comprar["Diferenca"].sum()
     if total_diff > 0:
@@ -158,10 +155,7 @@ if aporte > 0:
     else:
         df_comprar["Aporte Recomendado"] = 0
 
-    # Formatar valores
     df_comprar["Aporte Recomendado"] = df_comprar["Aporte Recomendado"].map("R${:,.2f}".format)
-
-    # Ordenar do mais descontado para o menos
     df_comprar.sort_values("Diferenca", ascending=False, inplace=True)
 
     st.subheader("Recomendações de Aporte")
