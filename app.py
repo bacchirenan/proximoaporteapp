@@ -74,15 +74,28 @@ map_tickers = {
     # FIIs BR
     "MXRF11 - FII MAXI REN": "MXRF11.SA",
     "KNRI11 - FII KINEA": "KNRI11.SA",
+    "KNCR11 - FII KINEA RI": "KNCR11.SA",
+    "XPML11 - FII XP MALLS": "XPML11.SA",
+    "SNAG11 - FIAGRO SUNO CI": "SNAG11.SA",
+    "HSML11 - FII HSI MALL": "HSML11.SA",
+    
     # Ações BR
-    "PETR4 - PETROBRAS": "PETR4.SA",
-    "VALE3 - VALE": "VALE3.SA",
-    # Ações EUA
-    "AAPL": "AAPL",
-    "MSFT": "MSFT",
-    "GOOGL": "GOOGL",
-    "AMZN": "AMZN",
-    # Adicione todos os ativos da sua carteira
+    "TAEE11 - TAESA": "TAEE11.SA",
+    "SAPR4 - SANEPAR": "SAPR4.SA",
+    "CSMG3 - COPASA": "CSMG3.SA",
+    "CPLE6 - COPEL": "CPLE6.SA",
+    "BBSE3 - BBSEGURIDADE": "BBSE3.SA",
+    "BBDC3 - BRADESCO": "BBDC3.SA",
+    
+    # Ações EUA / ETFs
+    "AAPL - Apple Inc.": "AAPL",
+    "MSFT - Microsoft Corporation": "MSFT",
+    "VOO - Vanguard S&P 500 ETF": "VOO",
+    "SOXX - iShares PHLX SOX Semiconductor Sector Index Fund": "SOXX",
+    "DDOG - Datadog, Inc.": "DDOG",
+    "CRWD - CrowdStrike Holdings, Inc.": "CRWD",
+    "O - Realty Income Corporation": "O",
+    "KO - Coca": "KO",
 }
 
 def obter_ticker(produto):
