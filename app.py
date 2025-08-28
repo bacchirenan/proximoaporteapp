@@ -15,15 +15,15 @@ except Exception:
     st.error("❌ Erro ao carregar os dados da planilha. Verifique se o link está público.")
     st.stop()
 
+# ------------------------------
 # Preparar Carteira
-df_carteira["ValorAplicado"] = pd.to_numeric(df_carteira["Valor aplicado"], errors="coerce").fillna(0)
-df_carteira["SaldoBruto"] = pd.to_numeric(df_carteira["Saldo bruto"], errors="coerce").fillna(0)
-df_carteira["ParticipacaoAtual"] = (
-    df_carteira["Participação na carteira (%)"].astype(str)
-    .str.replace(",", ".")
-    .str.replace("%", "")
-)
-df_carteira["ParticipacaoAtual"] = pd.to_numeric(df_carteira["ParticipacaoAtual"], errors="coerce").fillna(0)
+# ------------------------------
+def convert_to_numeric(col):
+    return pd.to_numeric(col.astype(str).str.replace(",", "."), errors="coerce").fillna(0)
+
+df_carteira["ValorAplicado"] = convert_to_numeric(df_carteira["Valor aplicado"])
+df_carteira["SaldoBruto"] = convert_to_numeric(df_carteira["Saldo bruto"])
+df_carteira["ParticipacaoAtual"] = convert_to_numeric(df_carteira["Participação na carteira (%)"])
 
 # Agrupar ativos repetidos
 df_carteira = df_carteira.groupby("Produto", as_index=False).agg({
@@ -32,12 +32,11 @@ df_carteira = df_carteira.groupby("Produto", as_index=False).agg({
     "ParticipacaoAtual": "sum"
 })
 
+# ------------------------------
 # Preparar Alocacao
+# ------------------------------
 df_alocacao = df_alocacao.rename(columns={"Ativo": "Produto", "PercentualIdeal": "ParticipacaoIdeal"})
-df_alocacao["ParticipacaoIdeal"] = (
-    df_alocacao["ParticipacaoIdeal"].astype(str).str.replace(",", ".")
-)
-df_alocacao["ParticipacaoIdeal"] = pd.to_numeric(df_alocacao["ParticipacaoIdeal"], errors="coerce").fillna(0)
+df_alocacao["ParticipacaoIdeal"] = convert_to_numeric(df_alocacao["ParticipacaoIdeal"])
 
 # Merge Carteira x Alocacao
 df = pd.merge(df_carteira, df_alocacao, on="Produto", how="outer")
@@ -52,11 +51,15 @@ df["Diferenca"] = df["ParticipacaoIdeal"] - df["ParticipacaoAtual"]
 # Mostrar apenas colunas essenciais
 df_display = df[["Produto", "ValorAplicado", "SaldoBruto", "ParticipacaoAtual", "ParticipacaoIdeal", "Diferenca"]]
 
+# ------------------------------
 # Exibir tabela
+# ------------------------------
 st.title("📊 Carteira vs Alocação Ideal")
 st.dataframe(df_display, use_container_width=True)
 
+# ------------------------------
 # Resumo colorido
+# ------------------------------
 st.subheader("Resumo")
 for _, row in df_display.iterrows():
     if row["Diferenca"] > 0:
