@@ -18,22 +18,23 @@ except Exception:
     st.stop()
 
 # ------------------------------
-# Limpeza de valores monetários (robusta)
+# Função robusta para valores monetários
 # ------------------------------
 def parse_valor(valor):
     if pd.isna(valor):
         return 0
-    valor = str(valor).strip()
-    valor = re.sub(r"[^\d.,-]", "", valor)  # remove caracteres indesejados
-    valor = valor.replace(",", ".")
+    valor = str(valor).strip()                   # remove espaços
+    valor = re.sub(r"[^\d,.\-]", "", valor)     # remove tudo que não seja número, ponto ou vírgula
+    valor = valor.replace(",", ".")             # converte vírgula em ponto
     try:
         return float(valor)
     except:
         return 0
 
-df_carteira["ValorAplicado"] = df_carteira["Valor aplicado"].astype(str).apply(parse_valor)
-df_carteira["SaldoBruto"] = df_carteira["Saldo bruto"].astype(str).apply(parse_valor)
-df_carteira["ParticipacaoAtual"] = df_carteira["Participação na carteira (%)"].astype(str).apply(parse_valor)
+# Aplicar parse robusto
+df_carteira["ValorAplicado"] = df_carteira["Valor aplicado"].apply(parse_valor)
+df_carteira["SaldoBruto"] = df_carteira["Saldo bruto"].apply(parse_valor)
+df_carteira["ParticipacaoAtual"] = df_carteira["Participação na carteira (%)"].apply(parse_valor)
 
 # Agrupar ativos repetidos
 df_carteira = df_carteira.groupby("Produto", as_index=False).agg({
@@ -72,23 +73,18 @@ df["Status"] = df["Diferenca"].apply(icone_diferenca)
 # Mapear tickers manualmente
 # ------------------------------
 map_tickers = {
-    # FIIs BR
     "MXRF11 - FII MAXI REN": "MXRF11.SA",
     "KNRI11 - FII KINEA": "KNRI11.SA",
     "KNCR11 - FII KINEA RI": "KNCR11.SA",
     "XPML11 - FII XP MALLS": "XPML11.SA",
     "SNAG11 - FIAGRO SUNO CI": "SNAG11.SA",
     "HSML11 - FII HSI MALL": "HSML11.SA",
-    
-    # Ações BR
     "TAEE11 - TAESA": "TAEE11.SA",
     "SAPR4 - SANEPAR": "SAPR4.SA",
     "CSMG3 - COPASA": "CSMG3.SA",
     "CPLE6 - COPEL": "CPLE6.SA",
     "BBSE3 - BBSEGURIDADE": "BBSE3.SA",
     "BBDC3 - BRADESCO": "BBDC3.SA",
-    
-    # Ações EUA / ETFs
     "AAPL - Apple Inc.": "AAPL",
     "MSFT - Microsoft Corporation": "MSFT",
     "VOO - Vanguard S&P 500 ETF": "VOO",
@@ -116,7 +112,6 @@ def preco_atual(ticker):
     except:
         return None
 
-# Atualizar Valor Atual na tabela principal
 df["Ticker"] = df["Produto"].apply(obter_ticker)
 df["ValorAtual"] = df["Ticker"].apply(preco_atual)
 
