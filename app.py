@@ -61,8 +61,7 @@ df["Status"] = df["Diferenca"].apply(status_color)
 # --- Buscar valor atual via yfinance ---
 def get_valor_atual(ticker):
     try:
-        data = yf.Ticker(ticker.split()[0])  # Pega só o ticker antes do "-"
-        return data.history(period="1d")["Close"][-1]
+        return yf.Ticker(ticker.split()[0]).history(period="1d")["Close"][-1]
     except:
         return None
 
@@ -76,12 +75,13 @@ for col in ["ValorAplicado", "SaldoBruto", "ValorAtual"]:
 st.subheader("Carteira Atual vs Alocação Ideal")
 st.dataframe(df[["Ativo", "ValorAplicado", "SaldoBruto", "ParticipacaoAtual", "ParticipacaoIdeal", "Diferenca", "Status", "ValorAtual"]])
 
-# --- Caixa de aporte ajustada para centavos ---
+# --- Caixa de aporte corrigida para digitar qualquer valor ---
 aporte = st.number_input(
     "Qual o valor do aporte?", 
     min_value=0.0, 
-    step=0.01,       # passo mínimo em centavos
-    format="%.2f"    # formatação para 2 casas decimais
+    step=0.01,       # permite centavos
+    format="%.2f",   # formata com duas casas decimais
+    key="aporte"
 )
 
 if aporte > 0:
