@@ -100,9 +100,14 @@ if aporte > 0:
         # Distribuir aporte proporcionalmente
         df_comprar["AporteRecomendado"] = df_comprar["Diferenca"] / total_diferenca * aporte
         
+        # Criar a tabela final de recomendações
+        df_recomendacao = df_comprar[["Produto", "SaldoBruto", "Diferenca", "AporteRecomendado"]].copy()
+        df_recomendacao = df_recomendacao.rename(columns={"SaldoBruto": "ValorAtual"})
+        
         st.write("💡 Recomendação de aporte proporcional aos ativos mais descontados (🔵 Comprar mais):")
-        st.dataframe(df_comprar[["Produto", "Diferenca", "AporteRecomendado"]], use_container_width=True)
+        st.dataframe(df_recomendacao, use_container_width=True)
     else:
         st.write("Todos os ativos estão na alocação ideal. Nenhum aporte necessário.")
+
 
 
