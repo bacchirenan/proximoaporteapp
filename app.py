@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import re
 
 st.set_page_config(page_title="Carteira vs Alocação", layout="wide")
 
@@ -16,14 +17,24 @@ except Exception:
     st.stop()
 
 # ------------------------------
-# Preparar Carteira
+# Função para limpar valores monetários
 # ------------------------------
-def convert_to_numeric(col):
-    return pd.to_numeric(col.astype(str).str.replace(",", "."), errors="coerce").fillna(0)
+def parse_valor(valor):
+    if pd.isna(valor):
+        return 0
+    # Remove tudo que não seja número, vírgula ou ponto
+    valor = re.sub(r"[^\d,.-]", "", str(valor))
+    # Troca vírgula por ponto
+    valor = valor.replace(",", ".")
+    try:
+        return float(valor)
+    except:
+        return 0
 
-df_carteira["ValorAplicado"] = convert_to_numeric(df_carteira["Valor aplicado"])
-df_carteira["SaldoBruto"] = convert_to_numeric(df_carteira["Saldo bruto"])
-df_carteira["ParticipacaoAtual"] = convert_to_numeric(df_carteira["Participação na carteira (%)"])
+# Aplicar limpeza
+df_carteira["ValorAplicado"] = df_carteira["Valor aplicado"].apply(parse_valor)
+df_carteira["SaldoBruto"] = df_carteira["Saldo bruto"].apply(parse_valor)
+df_carteira["ParticipacaoAtual"] = df_carteira["Participação na carteira (%)"].apply(parse_valor)
 
 # Agrupar ativos repetidos
 df_carteira = df_carteira.groupby("Produto", as_index=False).agg({
@@ -36,7 +47,7 @@ df_carteira = df_carteira.groupby("Produto", as_index=False).agg({
 # Preparar Alocacao
 # ------------------------------
 df_alocacao = df_alocacao.rename(columns={"Ativo": "Produto", "PercentualIdeal": "ParticipacaoIdeal"})
-df_alocacao["ParticipacaoIdeal"] = convert_to_numeric(df_alocacao["ParticipacaoIdeal"])
+df_alocacao["ParticipacaoIdeal"] = df_alocacao["ParticipacaoIdeal"].apply(parse_valor)
 
 # Merge Carteira x Alocacao
 df = pd.merge(df_carteira, df_alocacao, on="Produto", how="outer")
