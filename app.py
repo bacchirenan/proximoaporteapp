@@ -34,9 +34,9 @@ df_alocacao["PercentualIdeal"] = pd.to_numeric(
     errors="coerce"
 )
 
-# Agrupar Carteira por Produto
+# Agrupar Carteira por Produto, mas manter Valor Aplicado original
 df_carteira = df_carteira.groupby("Produto", as_index=False).agg({
-    "Valor aplicado": "sum",
+    "Valor aplicado": "first",  # <- pega o valor original da planilha
     "Saldo bruto": "sum",
     "Rentabilidade (%)": "mean",
     "Participação na carteira (%)": "sum"
