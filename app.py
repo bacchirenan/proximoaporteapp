@@ -17,12 +17,16 @@ except Exception as e:
     st.error("Erro ao carregar os dados da planilha. Verifique o link e permissões.")
     st.stop()
 
-# Converter colunas numéricas
+# Padronizar nomes de colunas removendo espaços extras
+df_carteira.columns = df_carteira.columns.str.strip()
+df_alocacao.columns = df_alocacao.columns.str.strip()
+
+# Substituir vírgula por ponto e converter para numérico
 numericas = ["Valor aplicado", "Saldo bruto", "Rentabilidade (%)", "Participação na carteira (%)"]
 for col in numericas:
-    df_carteira[col] = pd.to_numeric(df_carteira[col], errors="coerce")
+    df_carteira[col] = df_carteira[col].astype(str).str.replace(",", ".").astype(float)
 
-df_alocacao["PercentualIdeal"] = pd.to_numeric(df_alocacao["PercentualIdeal"], errors="coerce")
+df_alocacao["PercentualIdeal"] = df_alocacao["PercentualIdeal"].astype(str).str.replace(",", ".").astype(float)
 
 # Agrupar Carteira por Produto
 df_carteira = df_carteira.groupby("Produto", as_index=False).agg({
