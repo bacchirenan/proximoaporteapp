@@ -2,100 +2,96 @@ import streamlit as st
 import pandas as pd
 import yfinance as yf
 
-st.title("Gestão de Carteira")
+st.set_page_config(page_title="Gestão de Carteira", layout="wide")
 
-# --- URLs das planilhas públicas (CSV export) ---
-CARTEIRA_URL = "https://docs.google.com/spreadsheets/d/1CXeUHvD-FG3uvkWSDnMKlFmmZAtMac9pzP8lhxNie74/export?format=csv&gid=0"
-ALOCACAO_URL = "https://docs.google.com/spreadsheets/d/1CXeUHvD-FG3uvkWSDnMKlFmmZAtMac9pzP8lhxNie74/export?format=csv&gid=1042665035"
+# --- URLs CSV público ---
+URL_CARTEIRA = "https://docs.google.com/spreadsheets/d/1CXeUHvD-FG3uvkWSDnMKlFmmZAtMac9pzP8lhxNie74/export?format=csv&gid=0"
+URL_ALOCACAO = "https://docs.google.com/spreadsheets/d/1CXeUHvD-FG3uvkWSDnMKlFmmZAtMac9pzP8lhxNie74/export?format=csv&gid=1042665035"
 
-# --- Ler CSVs ---
-df_carteira = pd.read_csv(CARTEIRA_URL)
-df_alocacao = pd.read_csv(ALOCACAO_URL)
+# --- Carregar dados ---
+df_carteira = pd.read_csv(URL_CARTEIRA)
+df_alocacao = pd.read_csv(URL_ALOCACAO)
 
-# --- Renomear colunas para padrão interno ---
+# --- Agrupar Carteira por Produto ---
+df_carteira = df_carteira.groupby("Produto", as_index=False).agg({
+    "Valor aplicado": "sum",
+    "Saldo bruto": "sum",
+    "Rentabilidade (%)": "mean",
+    "Participação na carteira (%)": "sum"
+})
+
+# --- Renomear colunas para padronizar ---
 df_carteira.rename(columns={
-    "Produto": "Ativo",
+    "Participação na carteira (%)": "ParticipacaoAtual",
     "Valor aplicado": "ValorAplicado",
     "Saldo bruto": "SaldoBruto",
-    "Participação na carteira (%)": "ParticipacaoAtual",
     "Rentabilidade (%)": "Rentabilidade"
 }, inplace=True)
 
-df_alocacao.rename(columns={
-    "PercentualIdeal": "ParticipacaoIdeal"
-}, inplace=True)
+df_alocacao.rename(columns={"Ativo": "Produto", "PercentualIdeal": "ParticipacaoIdeal"}, inplace=True)
 
-# --- Converter colunas numéricas ---
-for col in ["ValorAplicado", "SaldoBruto", "Rentabilidade", "ParticipacaoAtual", "ParticipacaoIdeal"]:
-    if col in df_carteira.columns:
-        df_carteira[col] = pd.to_numeric(df_carteira[col], errors="coerce").fillna(0)
-    if col in df_alocacao.columns:
-        df_alocacao[col] = pd.to_numeric(df_alocacao[col], errors="coerce").fillna(0)
+# --- Unir Carteira com Alocacao ---
+df = pd.merge(df_carteira, df_alocacao, on="Produto", how="left")
 
-# --- Agrupar ativos repetidos na carteira ---
-df_carteira = df_carteira.groupby("Ativo", as_index=False).agg({
-    "Data da primeira aplicação": "min",
-    "ValorAplicado": "sum",
-    "SaldoBruto": "sum",
-    "Rentabilidade": "mean",
-    "ParticipacaoAtual": "sum"
-})
-
-# --- Merge com alocação ---
-df = pd.merge(df_carteira, df_alocacao, on="Ativo", how="left")
-
-# --- Calcular diferença ---
+# --- Calcular diferença e status ---
 df["Diferenca"] = df["ParticipacaoIdeal"] - df["ParticipacaoAtual"]
 
-# --- Status (verde = ideal, azul = comprar, vermelho = reduzir) ---
-def status_color(x):
-    if x == 0:
-        return "🟢 Ideal"
-    elif x > 0:
-        return "🔵 Comprar"
+def status_icon(diff):
+    if pd.isna(diff):
+        return "⚪"
+    elif diff > 0:
+        return "🔵"  # Comprar
+    elif diff < 0:
+        return "🔴"  # Reduzir
     else:
-        return "🔴 Reduzir"
+        return "🟢"  # Ideal
 
-df["Status"] = df["Diferenca"].apply(status_color)
+df["Status"] = df["Diferenca"].apply(status_icon)
 
-# --- Buscar valor atual via yfinance ---
-def get_valor_atual(ticker):
+# --- Puxar valor atual de cada ativo ---
+valores_atuais = {}
+for produto in df["Produto"]:
     try:
-        return yf.Ticker(ticker.split()[0]).history(period="1d")["Close"][-1]
+        ticker = produto.split(" - ")[0].strip()
+        data = yf.Ticker(ticker)
+        valor = data.history(period="1d")["Close"].iloc[-1]
+        valores_atuais[produto] = valor
     except:
-        return None
+        valores_atuais[produto] = None
 
-df["ValorAtual"] = df["Ativo"].apply(get_valor_atual)
+df["ValorAtual"] = df["Produto"].map(valores_atuais)
 
-# --- Formatação monetária ---
-for col in ["ValorAplicado", "SaldoBruto", "ValorAtual"]:
-    df[col] = df[col].apply(lambda x: f"R${x:,.2f}" if pd.notnull(x) else "N/A")
+# --- Formatação ---
+df["ValorAplicado"] = df["ValorAplicado"].apply(lambda x: f"R${x:,.2f}")
+df["SaldoBruto"] = df["SaldoBruto"].apply(lambda x: f"R${x:,.2f}")
+df["ParticipacaoAtual"] = df["ParticipacaoAtual"].apply(lambda x: f"{x:.2f}%")
+df["ParticipacaoIdeal"] = df["ParticipacaoIdeal"].apply(lambda x: f"{x:.2f}%" if pd.notna(x) else "N/A")
+df["Diferenca"] = df["Diferenca"].apply(lambda x: f"{x:.2f}%" if pd.notna(x) else "N/A")
+df["ValorAtual"] = df["ValorAtual"].apply(lambda x: f"R${x:,.2f}" if pd.notna(x) else "N/A")
 
-# --- Mostrar tabela principal ---
 st.subheader("Carteira Atual vs Alocação Ideal")
-st.dataframe(df[["Ativo", "ValorAplicado", "SaldoBruto", "ParticipacaoAtual", "ParticipacaoIdeal", "Diferenca", "Status", "ValorAtual"]])
+st.dataframe(df[["Produto", "ValorAplicado", "SaldoBruto", "ParticipacaoAtual", "ParticipacaoIdeal", "Diferenca", "Status", "ValorAtual"]])
 
-# --- Caixa de aporte corrigida para digitar qualquer valor ---
+# --- Caixa de aporte ---
 aporte = st.number_input(
-    "Qual o valor do aporte?", 
-    min_value=0.0, 
-    step=0.01,       # permite centavos
-    format="%.2f",   # formata com duas casas decimais
-    key="aporte"
+    "Qual o valor do aporte?",
+    min_value=0.0,
+    value=0.0,
+    step=1.0,
+    format="%.2f"
 )
 
 if aporte > 0:
-    # --- Filtrar ativos para comprar (status azul) ---
-    df_comprar = df[df["Status"] == "🔵 Comprar"].copy()
+    # Filtrar ativos para comprar (status azul)
+    df_comprar = df[df["Status"] == "🔵"].copy()
     df_comprar = df_comprar.sort_values("Diferenca", ascending=False)
 
-    # --- Calcular aporte recomendado proporcional à diferença ---
-    total_diferenca = df_comprar["Diferenca"].sum()
+    total_diferenca = df_comprar["Diferenca"].apply(lambda x: float(x.strip('%')) if pd.notna(x) else 0).sum()
     if total_diferenca > 0:
-        df_comprar["Aporte Recomendado"] = df_comprar["Diferenca"] / total_diferenca * aporte
+        df_comprar["Aporte Recomendado"] = df_comprar["Diferenca"].apply(lambda x: float(x.strip('%')) if pd.notna(x) else 0) / total_diferenca * aporte
         df_comprar["Aporte Recomendado"] = df_comprar["Aporte Recomendado"].apply(lambda x: f"R${x:,.2f}")
     else:
         df_comprar["Aporte Recomendado"] = "R$0,00"
 
     st.subheader("Recomendações de Aporte")
-    st.dataframe(df_comprar[["Ativo", "ValorAtual", "Aporte Recomendado"]])
+    st.dataframe(df_comprar[["Produto", "ValorAtual", "Aporte Recomendado"]])
