@@ -107,10 +107,10 @@ def status(row):
 
 df["Status"] = df.apply(status, axis=1)
 
-# Buscar valor atual online
+# Função para buscar valor atual na internet
 def get_valor_atual(ticker):
     try:
-        ticker_data = yf.Ticker(ticker.split(" - ")[0])
+        ticker_data = yf.Ticker(ticker)
         price = ticker_data.history(period="1d")["Close"][-1]
         return price
     except:
