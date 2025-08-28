@@ -21,19 +21,30 @@ except Exception as e:
 df_carteira.columns = df_carteira.columns.str.strip()
 df_alocacao.columns = df_alocacao.columns.str.strip()
 
-# Limpar e converter a coluna "Valor aplicado" corretamente
+# Limpar e converter a coluna "Valor aplicado"
 df_carteira["Valor aplicado"] = (
     df_carteira["Valor aplicado"]
-    .astype(str)  # garante string
-    .str.replace("R$", "", regex=False)  # remove R$
-    .str.replace(".", "", regex=False)   # remove pontos de milhar
-    .str.replace(",", ".", regex=False)  # transforma vírgula em ponto
-    .str.strip()  # remove espaços
+    .astype(str)
+    .str.replace("R$", "", regex=False)
+    .str.replace(".", "", regex=False)
+    .str.replace(",", ".", regex=False)
+    .str.strip()
 )
 df_carteira["Valor aplicado"] = pd.to_numeric(df_carteira["Valor aplicado"], errors="coerce")
 
-# Substituir vírgula por ponto e converter outras colunas numéricas
-numericas = ["Saldo bruto", "Rentabilidade (%)", "Participação na carteira (%)"]
+# Limpar e converter a coluna "Saldo bruto" da mesma forma
+df_carteira["Saldo bruto"] = (
+    df_carteira["Saldo bruto"]
+    .astype(str)
+    .str.replace("R$", "", regex=False)
+    .str.replace(".", "", regex=False)
+    .str.replace(",", ".", regex=False)
+    .str.strip()
+)
+df_carteira["Saldo bruto"] = pd.to_numeric(df_carteira["Saldo bruto"], errors="coerce")
+
+# Converter outras colunas numéricas
+numericas = ["Rentabilidade (%)", "Participação na carteira (%)"]
 for col in numericas:
     df_carteira[col] = pd.to_numeric(
         df_carteira[col].astype(str).str.replace(",", ".").str.strip(),
@@ -45,15 +56,15 @@ df_alocacao["PercentualIdeal"] = pd.to_numeric(
     errors="coerce"
 )
 
-# Agrupar Carteira por Produto, mas manter Valor Aplicado original
+# Agrupar Carteira por Produto, mantendo Valor Aplicado e Saldo Bruto originais
 df_carteira = df_carteira.groupby("Produto", as_index=False).agg({
-    "Valor aplicado": "first",  # pega valor limpo da planilha
-    "Saldo bruto": "sum",
+    "Valor aplicado": "first",
+    "Saldo bruto": "first",
     "Rentabilidade (%)": "mean",
     "Participação na carteira (%)": "sum"
 })
 
-# Renomear colunas para padronizar
+# Renomear colunas
 df_carteira.rename(columns={
     "Valor aplicado": "ValorAplicado",
     "Saldo bruto": "SaldoBruto",
@@ -103,15 +114,16 @@ df["ParticipacaoIdeal"] = df["ParticipacaoIdeal"].map(lambda x: f"{x:.2f}%" if p
 # Exibir tabela principal
 st.subheader("Carteira Atual vs Alocação Ideal")
 
-# Renomear colunas para exibição final, incluindo Valor Aplicado com espaço
+# Renomear colunas para exibição
 df_exibir = df.rename(columns={
     "ValorAplicado": "Valor Aplicado",
+    "SaldoBruto": "Saldo Bruto",
     "ParticipacaoAtual": "Participação Atual",
     "ParticipacaoIdeal": "Participação Ideal"
 })
 
-st.dataframe(df_exibir[["Produto", "Valor Aplicado", "SaldoBruto", 
-                        "Participação Atual", "Participação Ideal", 
+st.dataframe(df_exibir[["Produto", "Valor Aplicado", "Saldo Bruto",
+                        "Participação Atual", "Participação Ideal",
                         "Diferenca", "Status", "ValorAtual"]])
 
 # Caixa de entrada para aporte
