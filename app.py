@@ -18,21 +18,22 @@ except Exception:
     st.stop()
 
 # ------------------------------
-# Limpeza de valores monetários
+# Limpeza de valores monetários (robusta)
 # ------------------------------
 def parse_valor(valor):
     if pd.isna(valor):
         return 0
-    valor = re.sub(r"[^\d,.-]", "", str(valor))
+    valor = str(valor).strip()
+    valor = re.sub(r"[^\d.,-]", "", valor)  # remove caracteres indesejados
     valor = valor.replace(",", ".")
     try:
         return float(valor)
     except:
         return 0
 
-df_carteira["ValorAplicado"] = df_carteira["Valor aplicado"].apply(parse_valor)
-df_carteira["SaldoBruto"] = df_carteira["Saldo bruto"].apply(parse_valor)
-df_carteira["ParticipacaoAtual"] = df_carteira["Participação na carteira (%)"].apply(parse_valor)
+df_carteira["ValorAplicado"] = df_carteira["Valor aplicado"].astype(str).apply(parse_valor)
+df_carteira["SaldoBruto"] = df_carteira["Saldo bruto"].astype(str).apply(parse_valor)
+df_carteira["ParticipacaoAtual"] = df_carteira["Participação na carteira (%)"].astype(str).apply(parse_valor)
 
 # Agrupar ativos repetidos
 df_carteira = df_carteira.groupby("Produto", as_index=False).agg({
