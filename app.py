@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 
-st.set_page_config(page_title="Gestão de Carteira", layout="wide")
+st.set_page_config(page_title="Carteira vs Alocação", layout="wide")
 
 # ============================
 # URLs públicas CSV
@@ -20,7 +20,7 @@ except Exception as e:
     st.stop()
 
 # ============================
-# Converter colunas numéricas e datas
+# Preparar Carteira
 # ============================
 df_carteira["ValorAplicado"] = pd.to_numeric(df_carteira["Valor aplicado"], errors="coerce").fillna(0)
 df_carteira["SaldoBruto"] = pd.to_numeric(df_carteira["Saldo bruto"], errors="coerce").fillna(0)
@@ -41,13 +41,21 @@ df_carteira["ParticipacaoAtual"] = pd.to_numeric(df_carteira["ParticipacaoAtual"
 
 df_carteira["Data"] = pd.to_datetime(df_carteira["Data da primeira aplicação"], errors="coerce")
 
-# Renomear coluna Produto para Ativo
-df_carteira = df_carteira.rename(columns={"Produto": "Ativo"})
+# ============================
+# Agrupar ativos repetidos
+# ============================
+df_carteira = df_carteira.groupby("Produto", as_index=False).agg({
+    "Data": "min",
+    "ValorAplicado": "sum",
+    "SaldoBruto": "sum",
+    "Rentabilidade": "mean",
+    "ParticipacaoAtual": "sum"
+})
 
 # ============================
-# Alocacao
+# Preparar Alocacao
 # ============================
-df_alocacao = df_alocacao.rename(columns={"Ativo": "Ativo", "PercentualIdeal": "ParticipacaoIdeal"})
+df_alocacao = df_alocacao.rename(columns={"Ativo": "Produto", "PercentualIdeal": "ParticipacaoIdeal"})
 df_alocacao["ParticipacaoIdeal"] = (
     df_alocacao["ParticipacaoIdeal"].astype(str)
     .str.replace(",", ".")
@@ -57,27 +65,12 @@ df_alocacao["ParticipacaoIdeal"] = pd.to_numeric(df_alocacao["ParticipacaoIdeal"
 # ============================
 # Merge Carteira x Alocacao
 # ============================
-df = pd.merge(df_carteira, df_alocacao, on="Ativo", how="outer")
+df = pd.merge(df_carteira, df_alocacao, on="Produto", how="outer")
 
-# ============================
-# Preencher valores numéricos nulos com 0
-# ============================
-numericas = ["ValorAplicado", "SaldoBruto", "Rentabilidade", "ParticipacaoAtual", "ParticipacaoIdeal"]
-for col in numericas:
+# Preencher zeros para ativos que não existem em uma das abas
+for col in ["ValorAplicado", "SaldoBruto", "Rentabilidade", "ParticipacaoAtual", "ParticipacaoIdeal"]:
     if col in df.columns:
         df[col] = df[col].fillna(0)
-
-# ============================
-# Consolidar ativos repetidos
-# ============================
-df = df.groupby("Ativo", as_index=False).agg({
-    "Data": "min",
-    "ValorAplicado": "sum",
-    "SaldoBruto": "sum",
-    "Rentabilidade": "mean",
-    "ParticipacaoAtual": "sum",
-    "ParticipacaoIdeal": "mean"
-})
 
 # ============================
 # Calcular diferença
@@ -85,21 +78,19 @@ df = df.groupby("Ativo", as_index=False).agg({
 df["Diferenca"] = df["ParticipacaoIdeal"] - df["ParticipacaoAtual"]
 
 # ============================
-# Interface Streamlit
+# Exibir tabela
 # ============================
-st.title("📊 Gestão de Carteira")
-
-st.subheader("Carteira atual vs Alocação ideal (Consolidada)")
+st.title("📊 Carteira Consolidada vs Alocação Ideal")
 st.dataframe(df, use_container_width=True)
 
 # ============================
-# Resumo com cores
+# Resumo colorido
 # ============================
 st.subheader("Resumo")
 for _, row in df.iterrows():
     if row["Diferenca"] > 0:
-        st.write(f"🔵 Comprar mais de **{row['Ativo']}** (+{row['Diferenca']:.2f}%)")
+        st.write(f"🔵 Comprar mais de **{row['Produto']}** (+{row['Diferenca']:.2f}%)")
     elif row["Diferenca"] < 0:
-        st.write(f"🔴 Reduzir posição em **{row['Ativo']}** ({row['Diferenca']:.2f}%)")
+        st.write(f"🔴 Reduzir posição em **{row['Produto']}** ({row['Diferenca']:.2f}%)")
     else:
-        st.write(f"✅ {row['Ativo']} já está na alocação ideal.")
+        st.write(f"✅ {row['Produto']} já está na alocação ideal.")
