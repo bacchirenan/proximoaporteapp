@@ -91,18 +91,19 @@ df = pd.merge(df_carteira, df_alocacao, on="Produto", how="left")
 ativos_excluir = ["BRCR11", "BTHF11", "RBFF11", "RBRD11", "RECR11", "TAEE4"]
 df = df[~df["Produto"].isin(ativos_excluir)]
 
-# Calcular diferença e status
+# Calcular diferença
 df["Diferenca"] = df["ParticipacaoIdeal"] - df["ParticipacaoAtual"]
 
+# Status com bolinhas coloridas
 def status(row):
     if pd.isna(row["Diferenca"]):
         return "—"
     elif row["Diferenca"] > 0:
-        return "Comprar mais"
+        return "🟢 Comprar mais"
     elif row["Diferenca"] < 0:
-        return "Reduzir"
+        return "🔴 Reduzir"
     else:
-        return "Ok"
+        return "🔵 Ok"
 
 df["Status"] = df.apply(status, axis=1)
 
@@ -148,7 +149,7 @@ except ValueError:
     aporte = 0.0
 
 if aporte > 0:
-    df_comprar = df[df["Status"] == "Comprar mais"].copy()
+    df_comprar = df[df["Status"].str.contains("Comprar mais")].copy()
     total_diff = df_comprar["Diferenca"].sum()
     if total_diff > 0:
         df_comprar["Aporte Recomendado"] = (df_comprar["Diferenca"] / total_diff) * aporte
