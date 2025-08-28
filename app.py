@@ -83,6 +83,10 @@ df_carteira.rename(columns={
 # Merge Carteira + Alocacao
 df = pd.merge(df_carteira, df_alocacao, on="Produto", how="left")
 
+# Filtrar ativos que não devem aparecer
+ativos_excluir = ["BRCR11", "BTHF11", "RBFF11", "RBRD11", "RECR11", "TAEE4"]
+df = df[~df["Produto"].str.upper().isin(ativos_excluir)]
+
 # Calcular diferença e status
 df["Diferenca"] = df["ParticipacaoIdeal"] - df["ParticipacaoAtual"]
 
