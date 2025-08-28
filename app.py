@@ -92,13 +92,14 @@ df["ParticipacaoIdeal"] = df["ParticipacaoIdeal"].map(lambda x: f"{x:.2f}%" if p
 # Exibir tabela principal
 st.subheader("Carteira Atual vs Alocação Ideal")
 
-# Renomear colunas para exibição final
+# Renomear colunas para exibição final, incluindo Valor Aplicado com espaço
 df_exibir = df.rename(columns={
+    "ValorAplicado": "Valor Aplicado",
     "ParticipacaoAtual": "Participação Atual",
     "ParticipacaoIdeal": "Participação Ideal"
 })
 
-st.dataframe(df_exibir[["Produto", "ValorAplicado", "SaldoBruto", 
+st.dataframe(df_exibir[["Produto", "Valor Aplicado", "SaldoBruto", 
                         "Participação Atual", "Participação Ideal", 
                         "Diferenca", "Status", "ValorAtual"]])
 
@@ -121,4 +122,8 @@ if aporte > 0:
     # Formatar valores
     df_comprar["Aporte Recomendado"] = df_comprar["Aporte Recomendado"].map("R${:,.2f}".format)
 
-    # Ordenar do
+    # Ordenar do mais descontado para o menos
+    df_comprar.sort_values("Diferenca", ascending=False, inplace=True)
+
+    st.subheader("Recomendações de Aporte")
+    st.dataframe(df_comprar[["Produto", "ValorAtual", "Aporte Recomendado", "Diferenca"]])
