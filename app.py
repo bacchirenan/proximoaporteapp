@@ -81,4 +81,44 @@ def get_valor_atual(ticker):
 df["ValorAtual"] = df["Produto"].apply(get_valor_atual)
 
 # Formatar valores monetários
-df["ValorApli]()
+df["ValorAplicado"] = df["ValorAplicado"].map(lambda x: f"R${x:,.2f}" if pd.notna(x) else "N/A")
+df["SaldoBruto"] = df["SaldoBruto"].map(lambda x: f"R${x:,.2f}" if pd.notna(x) else "N/A")
+df["ValorAtual"] = df["ValorAtual"].map(lambda x: f"R${x:,.2f}" if pd.notna(x) else "N/A")
+
+# Formatar Participações como porcentagem
+df["ParticipacaoAtual"] = df["ParticipacaoAtual"].map(lambda x: f"{x:.2f}%" if pd.notna(x) else "N/A")
+df["ParticipacaoIdeal"] = df["ParticipacaoIdeal"].map(lambda x: f"{x:.2f}%" if pd.notna(x) else "N/A")
+
+# Exibir tabela principal
+st.subheader("Carteira Atual vs Alocação Ideal")
+
+# Renomear colunas para exibição final
+df_exibir = df.rename(columns={
+    "ParticipacaoAtual": "Participação Atual",
+    "ParticipacaoIdeal": "Participação Ideal"
+})
+
+st.dataframe(df_exibir[["Produto", "ValorAplicado", "SaldoBruto", 
+                        "Participação Atual", "Participação Ideal", 
+                        "Diferenca", "Status", "ValorAtual"]])
+
+# Caixa de entrada para aporte
+aporte_str = st.text_input("Qual o valor do aporte?", "0.00")
+try:
+    aporte = float(aporte_str.replace(",", "."))
+except ValueError:
+    aporte = 0.0
+
+if aporte > 0:
+    # Considerar apenas ativos para comprar mais
+    df_comprar = df[df["Status"] == "Comprar mais"].copy()
+    total_diff = df_comprar["Diferenca"].sum()
+    if total_diff > 0:
+        df_comprar["Aporte Recomendado"] = (df_comprar["Diferenca"] / total_diff) * aporte
+    else:
+        df_comprar["Aporte Recomendado"] = 0
+
+    # Formatar valores
+    df_comprar["Aporte Recomendado"] = df_comprar["Aporte Recomendado"].map("R${:,.2f}".format)
+
+    # Ordenar do
