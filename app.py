@@ -18,19 +18,18 @@ except Exception:
     st.stop()
 
 # ------------------------------
-# Função para limpar valores monetários
+# Limpeza de valores monetários
 # ------------------------------
 def parse_valor(valor):
     if pd.isna(valor):
         return 0
-    valor = re.sub(r"[^\d,.-]", "", str(valor))  # Remove tudo que não seja número, vírgula ou ponto
+    valor = re.sub(r"[^\d,.-]", "", str(valor))
     valor = valor.replace(",", ".")
     try:
         return float(valor)
     except:
         return 0
 
-# Limpar colunas da carteira
 df_carteira["ValorAplicado"] = df_carteira["Valor aplicado"].apply(parse_valor)
 df_carteira["SaldoBruto"] = df_carteira["Saldo bruto"].apply(parse_valor)
 df_carteira["ParticipacaoAtual"] = df_carteira["Participação na carteira (%)"].apply(parse_valor)
@@ -43,23 +42,20 @@ df_carteira = df_carteira.groupby("Produto", as_index=False).agg({
 })
 
 # ------------------------------
-# Limpar alocação
+# Alocação
 # ------------------------------
 df_alocacao = df_alocacao.rename(columns={"Ativo": "Produto", "PercentualIdeal": "ParticipacaoIdeal"})
 df_alocacao["ParticipacaoIdeal"] = df_alocacao["ParticipacaoIdeal"].apply(parse_valor)
 
 # Merge Carteira x Alocacao
 df = pd.merge(df_carteira, df_alocacao, on="Produto", how="outer")
-
-# Preencher zeros
 for col in ["ValorAplicado", "SaldoBruto", "ParticipacaoAtual", "ParticipacaoIdeal"]:
     df[col] = df[col].fillna(0)
 
-# Calcular diferença
 df["Diferenca"] = df["ParticipacaoIdeal"] - df["ParticipacaoAtual"]
 
 # ------------------------------
-# Função para ícones
+# Status de alocação
 # ------------------------------
 def icone_diferenca(x):
     if x > 0:
@@ -71,13 +67,13 @@ def icone_diferenca(x):
 
 df["Status"] = df["Diferenca"].apply(icone_diferenca)
 
-# Mostrar tabela completa
+# Tabela principal
 df_display = df[["Produto", "ValorAplicado", "SaldoBruto", "ParticipacaoAtual", "ParticipacaoIdeal", "Diferenca", "Status"]]
 st.title("📊 Carteira vs Alocação Ideal")
 st.dataframe(df_display, use_container_width=True)
 
 # ------------------------------
-# Função para pegar preço atual via Yahoo Finance
+# Função para preço atual
 # ------------------------------
 @st.cache_data(ttl=600)
 def preco_atual(ticker):
@@ -89,7 +85,7 @@ def preco_atual(ticker):
         return None
 
 # ------------------------------
-# Mapeamento de nomes da carteira para tickers Yahoo Finance
+# Mapeamento manual de tickers
 # ------------------------------
 map_tickers = {
     "AAPL": "AAPL",
@@ -100,8 +96,21 @@ map_tickers = {
     "Google": "GOOGL",
     "AMZN": "AMZN",
     "Amazon": "AMZN",
-    # adicione todos os ativos que você tem
+    # adicione outros ativos que você possui
 }
+
+# Função híbrida: tenta mapear manualmente, depois tenta adivinhar
+def obter_ticker(produto):
+    if produto in map_tickers:
+        return map_tickers[produto]
+    else:
+        # Tentar usar o próprio nome como ticker
+        try:
+            if not yf.Ticker(produto).history(period="1d").empty:
+                return produto
+        except:
+            return None
+    return None
 
 # ------------------------------
 # Caixa de aporte
@@ -116,25 +125,21 @@ except:
     aporte = 0
 
 if aporte > 0:
-    # Filtrar apenas ativos que precisam comprar mais (azuis)
     df_comprar = df[df["Diferenca"] > 0].copy()
     
     if not df_comprar.empty:
         # Ordenar do maior para o menor diferença
         df_comprar = df_comprar.sort_values(by="Diferenca", ascending=False)
         
-        # Mapear tickers e buscar preço atual
-        df_comprar["Ticker"] = df_comprar["Produto"].map(map_tickers)
+        # Mapear tickers e pegar preço atual
+        df_comprar["Ticker"] = df_comprar["Produto"].apply(obter_ticker)
         df_comprar["ValorAtual"] = df_comprar["Ticker"].apply(preco_atual)
         
-        # Calcular total de diferenças
+        # Calcular aporte proporcional
         total_diferenca = df_comprar["Diferenca"].sum()
-        # Distribuir aporte proporcionalmente
         df_comprar["AporteRecomendado"] = df_comprar["Diferenca"] / total_diferenca * aporte
         
-        # Criar a tabela final de recomendações
         df_recomendacao = df_comprar[["Produto", "ValorAtual", "Diferenca", "AporteRecomendado"]]
-        
         st.write("💡 Recomendação de aporte proporcional aos ativos mais descontados (🔵 Comprar mais):")
         st.dataframe(df_recomendacao, use_container_width=True)
     else:
