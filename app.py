@@ -76,8 +76,13 @@ for col in ["ValorAplicado", "SaldoBruto", "ValorAtual"]:
 st.subheader("Carteira Atual vs Alocação Ideal")
 st.dataframe(df[["Ativo", "ValorAplicado", "SaldoBruto", "ParticipacaoAtual", "ParticipacaoIdeal", "Diferenca", "Status", "ValorAtual"]])
 
-# --- Caixa de aporte ---
-aporte = st.number_input("Qual o valor do aporte?", min_value=0.0, step=100.0)
+# --- Caixa de aporte ajustada para centavos ---
+aporte = st.number_input(
+    "Qual o valor do aporte?", 
+    min_value=0.0, 
+    step=0.01,       # passo mínimo em centavos
+    format="%.2f"    # formatação para 2 casas decimais
+)
 
 if aporte > 0:
     # --- Filtrar ativos para comprar (status azul) ---
@@ -86,8 +91,11 @@ if aporte > 0:
 
     # --- Calcular aporte recomendado proporcional à diferença ---
     total_diferenca = df_comprar["Diferenca"].sum()
-    df_comprar["Aporte Recomendado"] = df_comprar["Diferenca"] / total_diferenca * aporte
-    df_comprar["Aporte Recomendado"] = df_comprar["Aporte Recomendado"].apply(lambda x: f"R${x:,.2f}")
+    if total_diferenca > 0:
+        df_comprar["Aporte Recomendado"] = df_comprar["Diferenca"] / total_diferenca * aporte
+        df_comprar["Aporte Recomendado"] = df_comprar["Aporte Recomendado"].apply(lambda x: f"R${x:,.2f}")
+    else:
+        df_comprar["Aporte Recomendado"] = "R$0,00"
 
     st.subheader("Recomendações de Aporte")
     st.dataframe(df_comprar[["Ativo", "ValorAtual", "Aporte Recomendado"]])
