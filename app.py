@@ -3,7 +3,6 @@ import pandas as pd
 import yfinance as yf
 
 st.set_page_config(page_title="Gestão de Carteira", layout="wide")
-
 st.title("Gestão de Carteira")
 
 # URLs das planilhas CSV públicas
@@ -76,13 +75,25 @@ df["ValorAplicado"] = df["ValorAplicado"].map("R${:,.2f}".format)
 df["SaldoBruto"] = df["SaldoBruto"].map("R${:,.2f}".format)
 df["ValorAtual"] = df["ValorAtual"].apply(lambda x: f"R${x:,.2f}" if x is not None else "N/A")
 
+# Formatar Participações como porcentagem
+df["ParticipacaoAtual"] = df["ParticipacaoAtual"].map("{:.2f}%".format)
+df["ParticipacaoIdeal"] = df["ParticipacaoIdeal"].map("{:.2f}%".format)
+
 # Exibir tabela principal
 st.subheader("Carteira Atual vs Alocação Ideal")
-st.dataframe(df[["Produto", "ValorAplicado", "SaldoBruto", "ParticipacaoAtual", "ParticipacaoIdeal", "Diferenca", "Status", "ValorAtual"]])
 
-# Caixa de entrada para aporte (mais flexível que number_input)
+# Renomear colunas para exibição final
+df_exibir = df.rename(columns={
+    "ParticipacaoAtual": "Participação Atual",
+    "ParticipacaoIdeal": "Participação Ideal"
+})
+
+st.dataframe(df_exibir[["Produto", "ValorAplicado", "SaldoBruto", 
+                        "Participação Atual", "Participação Ideal", 
+                        "Diferenca", "Status", "ValorAtual"]])
+
+# Caixa de entrada para aporte
 aporte_str = st.text_input("Qual o valor do aporte?", "0.00")
-
 try:
     aporte = float(aporte_str.replace(",", "."))
 except ValueError:
@@ -91,7 +102,6 @@ except ValueError:
 if aporte > 0:
     # Considerar apenas ativos para comprar mais
     df_comprar = df[df["Status"] == "Comprar mais"].copy()
-    # Calcular aporte recomendado proporcional à diferença
     total_diff = df_comprar["Diferenca"].sum()
     if total_diff > 0:
         df_comprar["Aporte Recomendado"] = (df_comprar["Diferenca"] / total_diff) * aporte
