@@ -113,7 +113,6 @@ ticker_map = {
     "PVBI11": "PVBI11.SA",
     "RBRF11": "RBRF11.SA",
     "RBRD11": "RBRD11.SA",
-    "RBRF11": "RBRF11.SA",
     "SAPR4": "SAPR4.SA",
     "SLCE3": "SLCE3.SA",
     "SNAG11": "SNAG11.SA",
@@ -152,4 +151,32 @@ df["ParticipacaoIdeal"] = df["ParticipacaoIdeal"].map(lambda x: f"{x:.2f}%" if p
 # Exibir tabela principal
 st.subheader("Carteira Atual vs Alocação Ideal")
 df_exibir = df.rename(columns={
-    "ValorAplicado": "Va
+    "ValorAplicado": "Valor Aplicado",
+    "SaldoBruto": "Saldo Bruto",
+    "ParticipacaoAtual": "Participação Atual",
+    "ParticipacaoIdeal": "Participação Ideal"
+})
+st.dataframe(df_exibir[["Produto", "Valor Aplicado", "Saldo Bruto",
+                        "Participação Atual", "Participação Ideal",
+                        "Diferenca", "Status", "ValorAtual"]])
+
+# Caixa de entrada para aporte
+aporte_str = st.text_input("Qual o valor do aporte?", "0.00")
+try:
+    aporte = float(aporte_str.replace(",", "."))
+except ValueError:
+    aporte = 0.0
+
+if aporte > 0:
+    df_comprar = df[df["Status"].str.contains("Comprar mais")].copy()
+    total_diff = df_comprar["Diferenca"].sum()
+    if total_diff > 0:
+        df_comprar["Aporte Recomendado"] = (df_comprar["Diferenca"] / total_diff) * aporte
+    else:
+        df_comprar["Aporte Recomendado"] = 0
+
+    df_comprar["Aporte Recomendado"] = df_comprar["Aporte Recomendado"].map("R${:,.2f}".format)
+    df_comprar.sort_values("Diferenca", ascending=False, inplace=True)
+
+    st.subheader("Recomendações de Aporte")
+    st.dataframe(df_comprar[["Produto", "ValorAtual", "Aporte Recomendado", "Diferenca"]])
