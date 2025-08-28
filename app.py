@@ -89,6 +89,21 @@ def preco_atual(ticker):
         return None
 
 # ------------------------------
+# Mapeamento de nomes da carteira para tickers Yahoo Finance
+# ------------------------------
+map_tickers = {
+    "AAPL": "AAPL",
+    "Apple": "AAPL",
+    "MSFT": "MSFT",
+    "Microsoft": "MSFT",
+    "GOOGL": "GOOGL",
+    "Google": "GOOGL",
+    "AMZN": "AMZN",
+    "Amazon": "AMZN",
+    # adicione todos os ativos que você tem
+}
+
+# ------------------------------
 # Caixa de aporte
 # ------------------------------
 st.subheader("💰 Simulação de Aporte")
@@ -108,8 +123,9 @@ if aporte > 0:
         # Ordenar do maior para o menor diferença
         df_comprar = df_comprar.sort_values(by="Diferenca", ascending=False)
         
-        # Buscar preço atual de cada ativo
-        df_comprar["ValorAtual"] = df_comprar["Produto"].apply(preco_atual)
+        # Mapear tickers e buscar preço atual
+        df_comprar["Ticker"] = df_comprar["Produto"].map(map_tickers)
+        df_comprar["ValorAtual"] = df_comprar["Ticker"].apply(preco_atual)
         
         # Calcular total de diferenças
         total_diferenca = df_comprar["Diferenca"].sum()
