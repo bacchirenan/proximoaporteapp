@@ -80,10 +80,10 @@ def get_valor_atual(ticker):
 
 df["ValorAtual"] = df["Produto"].apply(get_valor_atual)
 
-# Formatar valores monetários
-df["ValorAplicado"] = df["ValorAplicado"].map(lambda x: f"R${x:,.2f}" if pd.notna(x) else "N/A")
-df["SaldoBruto"] = df["SaldoBruto"].map(lambda x: f"R${x:,.2f}" if pd.notna(x) else "N/A")
-df["ValorAtual"] = df["ValorAtual"].map(lambda x: f"R${x:,.2f}" if pd.notna(x) else "N/A")
+# Substituir NaN por 0 e formatar valores monetários
+df["ValorAplicado"] = df["ValorAplicado"].fillna(0).map(lambda x: f"R${x:,.2f}")
+df["SaldoBruto"] = df["SaldoBruto"].fillna(0).map(lambda x: f"R${x:,.2f}")
+df["ValorAtual"] = df["ValorAtual"].fillna(0).map(lambda x: f"R${x:,.2f}")
 
 # Formatar Participações como porcentagem
 df["ParticipacaoAtual"] = df["ParticipacaoAtual"].map(lambda x: f"{x:.2f}%" if pd.notna(x) else "N/A")
