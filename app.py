@@ -68,7 +68,7 @@ df_alocacao["PercentualIdeal"] = pd.to_numeric(df_alocacao["PercentualIdeal"], e
 # Renomear coluna para padronização
 df_alocacao.rename(columns={"PercentualIdeal": "ParticipacaoIdeal", "Ativo": "Produto"}, inplace=True)
 
-# Agrupar Carteira por Produto, mantendo Valor Aplicado e Saldo Bruto originais
+# Agrupar Carteira por Produto
 df_carteira = df_carteira.groupby("Produto", as_index=False).agg({
     "Valor aplicado": "first",
     "Saldo bruto": "first",
@@ -107,27 +107,67 @@ def status(row):
 
 df["Status"] = df.apply(status, axis=1)
 
-# Criar coluna Ticker para yfinance (ativos brasileiros terminam com .SA)
-df["TickerYF"] = df["Produto"].apply(lambda x: f"{x}.SA" if not x.endswith(".SA") else x)
+# Mapeamento de tickers para yfinance
+ticker_map = {
+    "AAPL": "AAPL",
+    "BBDC3": "BBDC3.SA",
+    "BBSE3": "BBSE3.SA",
+    "BRCR11": "BRCR11.SA",
+    "BTHF11": "BTHF11.SA",
+    "BTLG11": "BTLG11.SA",
+    "CPLE6": "CPLE6.SA",
+    "CRWD": "CRWD",
+    "CSMG3": "CSMG3.SA",
+    "DDOG": "DDOG",
+    "DHS": "DHS",
+    "GGBR4": "GGBR4.SA",
+    "HSML11": "HSML11.SA",
+    "IBIT": "IBIT",
+    "IRDM11": "IRDM11.SA",
+    "ITUB4": "ITUB4.SA",
+    "KLBN4": "KLBN4.SA",
+    "KNCR11": "KNCR11.SA",
+    "KO": "KO",
+    "MSFT": "MSFT",
+    "MXRF11": "MXRF11.SA",
+    "O": "O",
+    "PVBI11": "PVBI11.SA",
+    "RBRF11": "RBRF11.SA",
+    "RBRD11": "RBRD11.SA",
+    "RBRF11": "RBRF11.SA",
+    "SAPR4": "SAPR4.SA",
+    "SLCE3": "SLCE3.SA",
+    "SNAG11": "SNAG11.SA",
+    "SOXX": "SOXX",
+    "TAEE11": "TAEE11.SA",
+    "TAEE4": "TAEE4.SA",
+    "VILG11": "VILG11.SA",
+    "VNQ": "VNQ",
+    "VOO": "VOO",
+    "WEGE3": "WEGE3.SA",
+    "XOM": "XOM",
+    "XPLG11": "XPLG11.SA",
+    "XPML11": "XPML11.SA"
+}
+
+df["TickerYF"] = df["Produto"].map(ticker_map)
 
 # Função para buscar valor atual
 def get_valor_atual(ticker):
+    if pd.isna(ticker):
+        return None
     try:
-        ticker_data = yf.Ticker(ticker)
-        price = ticker_data.history(period="1d")["Close"][-1]
+        price = yf.Ticker(ticker).history(period="1d")["Close"].iloc[-1]
         return price
     except:
         return None
 
-# Aplicar a função
 df["ValorAtual"] = df["TickerYF"].apply(get_valor_atual)
-
-# Formatar valores monetários
-df["ValorAplicado"] = df["ValorAplicado"].fillna(0).map(lambda x: f"R${x:,.2f}")
-df["SaldoBruto"] = df["SaldoBruto"].fillna(0).map(lambda x: f"R${x:,.2f}")
 df["ValorAtual"] = df["ValorAtual"].map(lambda x: f"R${x:,.2f}" if pd.notna(x) else "N/A")
 
-# Formatar Participações como porcentagem
+# Formatar valores monetários e participações
+df["ValorAplicado"] = df["ValorAplicado"].fillna(0).map(lambda x: f"R${x:,.2f}")
+df["SaldoBruto"] = df["SaldoBruto"].fillna(0).map(lambda x: f"R${x:,.2f}")
 df["ParticipacaoAtual"] = df["ParticipacaoAtual"].map(lambda x: f"{x:.2f}%" if pd.notna(x) else "N/A")
 df["ParticipacaoIdeal"] = df["ParticipacaoIdeal"].map(lambda x: f"{x:.2f}%" if pd.notna(x) else "N/A")
 
@@ -139,7 +179,6 @@ df_exibir = df.rename(columns={
     "ParticipacaoAtual": "Participação Atual",
     "ParticipacaoIdeal": "Participação Ideal"
 })
-
 st.dataframe(df_exibir[["Produto", "Valor Aplicado", "Saldo Bruto",
                         "Participação Atual", "Participação Ideal",
                         "Diferenca", "Status", "ValorAtual"]])
