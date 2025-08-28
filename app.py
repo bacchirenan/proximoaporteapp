@@ -20,7 +20,7 @@ except Exception as e:
     st.stop()
 
 # ============================
-# Mostrar colunas para conferência
+# Conferir colunas
 # ============================
 st.write("Colunas Carteira:", df_carteira.columns.tolist())
 st.write("Colunas Alocacao:", df_alocacao.columns.tolist())
@@ -30,11 +30,11 @@ st.write("Colunas Alocacao:", df_alocacao.columns.tolist())
 # ============================
 df_carteira = df_carteira.rename(columns={
     "Produto": "Ativo",
-    "Participação na carteira (%)": "ParticipacaoAtual",
-    "Valor Aplicado": "ValorAplicado",
-    "Saldo Bruto": "SaldoBruto",
+    "Data da primeira aplicação": "Data",
+    "Valor aplicado": "ValorAplicado",
+    "Saldo bruto": "SaldoBruto",
     "Rentabilidade (%)": "Rentabilidade",
-    "Data da Alocacao": "Data"
+    "Participação na carteira (%)": "ParticipacaoAtual"
 })
 
 df_alocacao = df_alocacao.rename(columns={
@@ -43,29 +43,31 @@ df_alocacao = df_alocacao.rename(columns={
 })
 
 # ============================
-# Converter texto em número (modo seguro)
+# Converter texto em número
 # ============================
-if "ParticipacaoAtual" in df_carteira.columns:
-    df_carteira["ParticipacaoAtual"] = (
-        df_carteira["ParticipacaoAtual"].astype(str)
-        .str.replace("%", "")
-        .str.replace(",", ".")
-    )
-    df_carteira["ParticipacaoAtual"] = pd.to_numeric(df_carteira["ParticipacaoAtual"], errors="coerce")
-else:
-    st.error("❌ Coluna 'ParticipacaoAtual' não encontrada na aba Carteira.")
-    st.stop()
+for col in ["ParticipacaoAtual"]:
+    if col in df_carteira.columns:
+        df_carteira[col] = (
+            df_carteira[col].astype(str)
+            .str.replace("%", "")
+            .str.replace(",", ".")
+        )
+        df_carteira[col] = pd.to_numeric(df_carteira[col], errors="coerce")
+    else:
+        st.error(f"❌ Coluna '{col}' não encontrada na aba Carteira.")
+        st.stop()
 
-if "ParticipacaoIdeal" in df_alocacao.columns:
-    df_alocacao["ParticipacaoIdeal"] = (
-        df_alocacao["ParticipacaoIdeal"].astype(str)
-        .str.replace("%", "")
-        .str.replace(",", ".")
-    )
-    df_alocacao["ParticipacaoIdeal"] = pd.to_numeric(df_alocacao["ParticipacaoIdeal"], errors="coerce")
-else:
-    st.error("❌ Coluna 'ParticipacaoIdeal' não encontrada na aba Alocacao.")
-    st.stop()
+for col in ["ParticipacaoIdeal"]:
+    if col in df_alocacao.columns:
+        df_alocacao[col] = (
+            df_alocacao[col].astype(str)
+            .str.replace("%", "")
+            .str.replace(",", ".")
+        )
+        df_alocacao[col] = pd.to_numeric(df_alocacao[col], errors="coerce")
+    else:
+        st.error(f"❌ Coluna '{col}' não encontrada na aba Alocacao.")
+        st.stop()
 
 # ============================
 # Merge Carteira x Alocacao
