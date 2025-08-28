@@ -20,42 +20,52 @@ except Exception as e:
     st.stop()
 
 # ============================
-# Converter colunas numéricas
+# Converter colunas numéricas e datas
 # ============================
-# Carteira
-df_carteira["ValorAplicado"] = pd.to_numeric(df_carteira["Valor aplicado"], errors="coerce")
-df_carteira["SaldoBruto"] = pd.to_numeric(df_carteira["Saldo bruto"], errors="coerce")
+df_carteira["ValorAplicado"] = pd.to_numeric(df_carteira["Valor aplicado"], errors="coerce").fillna(0)
+df_carteira["SaldoBruto"] = pd.to_numeric(df_carteira["Saldo bruto"], errors="coerce").fillna(0)
+
 df_carteira["Rentabilidade"] = (
     df_carteira["Rentabilidade (%)"].astype(str)
     .str.replace(",", ".")
     .str.replace("%", "")
 )
-df_carteira["Rentabilidade"] = pd.to_numeric(df_carteira["Rentabilidade"], errors="coerce")
+df_carteira["Rentabilidade"] = pd.to_numeric(df_carteira["Rentabilidade"], errors="coerce").fillna(0)
 
 df_carteira["ParticipacaoAtual"] = (
     df_carteira["Participação na carteira (%)"].astype(str)
     .str.replace(",", ".")
     .str.replace("%", "")
 )
-df_carteira["ParticipacaoAtual"] = pd.to_numeric(df_carteira["ParticipacaoAtual"], errors="coerce")
+df_carteira["ParticipacaoAtual"] = pd.to_numeric(df_carteira["ParticipacaoAtual"], errors="coerce").fillna(0)
 
 df_carteira["Data"] = pd.to_datetime(df_carteira["Data da primeira aplicação"], errors="coerce")
 
 # Renomear coluna Produto para Ativo
 df_carteira = df_carteira.rename(columns={"Produto": "Ativo"})
 
+# ============================
 # Alocacao
+# ============================
 df_alocacao = df_alocacao.rename(columns={"Ativo": "Ativo", "PercentualIdeal": "ParticipacaoIdeal"})
 df_alocacao["ParticipacaoIdeal"] = (
     df_alocacao["ParticipacaoIdeal"].astype(str)
     .str.replace(",", ".")
 )
-df_alocacao["ParticipacaoIdeal"] = pd.to_numeric(df_alocacao["ParticipacaoIdeal"], errors="coerce")
+df_alocacao["ParticipacaoIdeal"] = pd.to_numeric(df_alocacao["ParticipacaoIdeal"], errors="coerce").fillna(0)
 
 # ============================
 # Merge Carteira x Alocacao
 # ============================
 df = pd.merge(df_carteira, df_alocacao, on="Ativo", how="outer")
+
+# ============================
+# Preencher valores numéricos nulos com 0
+# ============================
+numericas = ["ValorAplicado", "SaldoBruto", "Rentabilidade", "ParticipacaoAtual", "ParticipacaoIdeal"]
+for col in numericas:
+    if col in df.columns:
+        df[col] = df[col].fillna(0)
 
 # ============================
 # Consolidar ativos repetidos
@@ -87,9 +97,7 @@ st.dataframe(df, use_container_width=True)
 # ============================
 st.subheader("Resumo")
 for _, row in df.iterrows():
-    if pd.isna(row["Diferenca"]):
-        continue
-    elif row["Diferenca"] > 0:
+    if row["Diferenca"] > 0:
         st.write(f"🔵 Comprar mais de **{row['Ativo']}** (+{row['Diferenca']:.2f}%)")
     elif row["Diferenca"] < 0:
         st.write(f"🔴 Reduzir posição em **{row['Ativo']}** ({row['Diferenca']:.2f}%)")
