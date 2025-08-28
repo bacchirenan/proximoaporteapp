@@ -56,6 +56,9 @@ df = pd.merge(df_carteira, df_alocacao, on="Ativo", how="left")
 # ------------------------------
 # Cálculo de diferença e status
 # ------------------------------
+# Converter ParticipacaoAtual e Ideal para float
+df["ParticipacaoAtual"] = pd.to_numeric(df["ParticipacaoAtual"], errors="coerce")
+df["ParticipacaoIdeal"] = pd.to_numeric(df["ParticipacaoIdeal"], errors="coerce")
 df["Diferenca"] = df["ParticipacaoIdeal"] - df["ParticipacaoAtual"]
 
 def status_ativo(dif):
@@ -75,7 +78,8 @@ df["Status"] = df["Diferenca"].apply(status_ativo)
 # ------------------------------
 def pegar_valor_atual(ticker):
     try:
-        valor = yf.Ticker(ticker.split(" ")[0]).history(period="1d")["Close"].iloc[-1]
+        symbol = ticker.split(" ")[0]  # pegar só o ticker
+        valor = yf.Ticker(symbol).history(period="1d")["Close"].iloc[-1]
         return valor
     except:
         return None
@@ -107,12 +111,23 @@ except:
     aporte = 0
 
 if aporte > 0:
+    # Só ativos que estão em 🔵 Comprar mais
     df_comprar = df[df["Status"] == "🔵 Comprar mais"].copy()
     
     if not df_comprar.empty:
-        # Ordenar do mais descontado
+        # Criar coluna numérica da diferença para cálculo
         df_comprar["Diferenca_num"] = df_comprar["Diferenca"].str.replace("R$", "").str.replace(".", "").str.replace(",", ".").astype(float)
+        # Ordenar do mais descontado
         df_comprar = df_comprar.sort_values(by="Diferenca_num", ascending=False)
         
         # Calcular aporte proporcional
-        df_comprar["Aporte Recomendado"] = df_comprar["Diferenc]()
+        df_comprar["Aporte Recomendado"] = df_comprar["Diferenca_num"] / df_comprar["Diferenca_num"].sum() * aporte
+        df_comprar["Aporte Recomendado"] = df_comprar["Aporte Recomendado"].apply(formatar_real)
+        
+        df_recomendacao = df_comprar[["Ativo","ValorAtual","Aporte Recomendado"]]
+        st.write("💡 Recomendação de aporte proporcional aos ativos mais descontados (🔵 Comprar mais):")
+        st.dataframe(df_recomendacao, use_container_width=True)
+    else:
+        st.write("Todos os ativos estão na alocação ideal. Nenhum aporte necessário.")
+else:
+    st.write("Informe o valor do aporte para calcular a recomendação.")
