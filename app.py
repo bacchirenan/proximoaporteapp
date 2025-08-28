@@ -21,12 +21,18 @@ except Exception as e:
 df_carteira.columns = df_carteira.columns.str.strip()
 df_alocacao.columns = df_alocacao.columns.str.strip()
 
-# Substituir vírgula por ponto e converter para numérico
+# Substituir vírgula por ponto e converter para numérico de forma segura
 numericas = ["Valor aplicado", "Saldo bruto", "Rentabilidade (%)", "Participação na carteira (%)"]
 for col in numericas:
-    df_carteira[col] = df_carteira[col].astype(str).str.replace(",", ".").astype(float)
+    df_carteira[col] = pd.to_numeric(
+        df_carteira[col].astype(str).str.replace(",", ".").str.strip(),
+        errors="coerce"
+    )
 
-df_alocacao["PercentualIdeal"] = df_alocacao["PercentualIdeal"].astype(str).str.replace(",", ".").astype(float)
+df_alocacao["PercentualIdeal"] = pd.to_numeric(
+    df_alocacao["PercentualIdeal"].astype(str).str.replace(",", ".").str.strip(),
+    errors="coerce"
+)
 
 # Agrupar Carteira por Produto
 df_carteira = df_carteira.groupby("Produto", as_index=False).agg({
@@ -75,48 +81,4 @@ def get_valor_atual(ticker):
 df["ValorAtual"] = df["Produto"].apply(get_valor_atual)
 
 # Formatar valores monetários
-df["ValorAplicado"] = df["ValorAplicado"].map("R${:,.2f}".format)
-df["SaldoBruto"] = df["SaldoBruto"].map("R${:,.2f}".format)
-df["ValorAtual"] = df["ValorAtual"].apply(lambda x: f"R${x:,.2f}" if x is not None else "N/A")
-
-# Formatar Participações como porcentagem
-df["ParticipacaoAtual"] = df["ParticipacaoAtual"].map("{:.2f}%".format)
-df["ParticipacaoIdeal"] = df["ParticipacaoIdeal"].map("{:.2f}%".format)
-
-# Exibir tabela principal
-st.subheader("Carteira Atual vs Alocação Ideal")
-
-# Renomear colunas para exibição final
-df_exibir = df.rename(columns={
-    "ParticipacaoAtual": "Participação Atual",
-    "ParticipacaoIdeal": "Participação Ideal"
-})
-
-st.dataframe(df_exibir[["Produto", "ValorAplicado", "SaldoBruto", 
-                        "Participação Atual", "Participação Ideal", 
-                        "Diferenca", "Status", "ValorAtual"]])
-
-# Caixa de entrada para aporte
-aporte_str = st.text_input("Qual o valor do aporte?", "0.00")
-try:
-    aporte = float(aporte_str.replace(",", "."))
-except ValueError:
-    aporte = 0.0
-
-if aporte > 0:
-    # Considerar apenas ativos para comprar mais
-    df_comprar = df[df["Status"] == "Comprar mais"].copy()
-    total_diff = df_comprar["Diferenca"].sum()
-    if total_diff > 0:
-        df_comprar["Aporte Recomendado"] = (df_comprar["Diferenca"] / total_diff) * aporte
-    else:
-        df_comprar["Aporte Recomendado"] = 0
-
-    # Formatar valores
-    df_comprar["Aporte Recomendado"] = df_comprar["Aporte Recomendado"].map("R${:,.2f}".format)
-
-    # Ordenar do mais descontado para o menos
-    df_comprar.sort_values("Diferenca", ascending=False, inplace=True)
-
-    st.subheader("Recomendações de Aporte")
-    st.dataframe(df_comprar[["Produto", "ValorAtual", "Aporte Recomendado", "Diferenca"]])
+df["ValorApli]()
