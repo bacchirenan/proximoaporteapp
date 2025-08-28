@@ -67,50 +67,51 @@ def icone_diferenca(x):
 
 df["Status"] = df["Diferenca"].apply(icone_diferenca)
 
-# Tabela principal
-df_display = df[["Produto", "ValorAplicado", "SaldoBruto", "ParticipacaoAtual", "ParticipacaoIdeal", "Diferenca", "Status"]]
-st.title("📊 Carteira vs Alocação Ideal")
-st.dataframe(df_display, use_container_width=True)
+# ------------------------------
+# Mapear tickers manualmente
+# ------------------------------
+map_tickers = {
+    # FIIs BR
+    "MXRF11 - FII MAXI REN": "MXRF11.SA",
+    "KNRI11 - FII KINEA": "KNRI11.SA",
+    # Ações BR
+    "PETR4 - PETROBRAS": "PETR4.SA",
+    "VALE3 - VALE": "VALE3.SA",
+    # Ações EUA
+    "AAPL": "AAPL",
+    "MSFT": "MSFT",
+    "GOOGL": "GOOGL",
+    "AMZN": "AMZN",
+    # Adicione todos os ativos da sua carteira
+}
+
+def obter_ticker(produto):
+    return map_tickers.get(produto, None)
 
 # ------------------------------
 # Função para preço atual
 # ------------------------------
 @st.cache_data(ttl=600)
 def preco_atual(ticker):
+    if ticker is None:
+        return None
     try:
         ativo = yf.Ticker(ticker)
         preco = ativo.history(period="1d")["Close"].iloc[-1]
-        return preco
+        return round(preco, 2)
     except:
         return None
 
-# ------------------------------
-# Mapeamento manual de tickers
-# ------------------------------
-map_tickers = {
-    "AAPL": "AAPL",
-    "Apple": "AAPL",
-    "MSFT": "MSFT",
-    "Microsoft": "MSFT",
-    "GOOGL": "GOOGL",
-    "Google": "GOOGL",
-    "AMZN": "AMZN",
-    "Amazon": "AMZN",
-    # adicione outros ativos que você possui
-}
+# Atualizar Valor Atual na tabela principal
+df["Ticker"] = df["Produto"].apply(obter_ticker)
+df["ValorAtual"] = df["Ticker"].apply(preco_atual)
 
-# Função híbrida: tenta mapear manualmente, depois tenta adivinhar
-def obter_ticker(produto):
-    if produto in map_tickers:
-        return map_tickers[produto]
-    else:
-        # Tentar usar o próprio nome como ticker
-        try:
-            if not yf.Ticker(produto).history(period="1d").empty:
-                return produto
-        except:
-            return None
-    return None
+# ------------------------------
+# Tabela principal
+# ------------------------------
+df_display = df[["Produto", "ValorAplicado", "SaldoBruto", "ParticipacaoAtual", "ParticipacaoIdeal", "Diferenca", "Status", "ValorAtual"]]
+st.title("📊 Carteira vs Alocação Ideal")
+st.dataframe(df_display, use_container_width=True)
 
 # ------------------------------
 # Caixa de aporte
@@ -128,16 +129,8 @@ if aporte > 0:
     df_comprar = df[df["Diferenca"] > 0].copy()
     
     if not df_comprar.empty:
-        # Ordenar do maior para o menor diferença
         df_comprar = df_comprar.sort_values(by="Diferenca", ascending=False)
-        
-        # Mapear tickers e pegar preço atual
-        df_comprar["Ticker"] = df_comprar["Produto"].apply(obter_ticker)
-        df_comprar["ValorAtual"] = df_comprar["Ticker"].apply(preco_atual)
-        
-        # Calcular aporte proporcional
-        total_diferenca = df_comprar["Diferenca"].sum()
-        df_comprar["AporteRecomendado"] = df_comprar["Diferenca"] / total_diferenca * aporte
+        df_comprar["AporteRecomendado"] = df_comprar["Diferenca"] / df_comprar["Diferenca"].sum() * aporte
         
         df_recomendacao = df_comprar[["Produto", "ValorAtual", "Diferenca", "AporteRecomendado"]]
         st.write("💡 Recomendação de aporte proporcional aos ativos mais descontados (🔵 Comprar mais):")
