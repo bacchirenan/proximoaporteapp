@@ -92,6 +92,9 @@ if aporte > 0:
     df_comprar = df[df["Diferenca"] > 0].copy()
     
     if not df_comprar.empty:
+        # Ordenar do maior para o menor diferença
+        df_comprar = df_comprar.sort_values(by="Diferenca", ascending=False)
+        
         # Calcular total de diferenças
         total_diferenca = df_comprar["Diferenca"].sum()
         # Distribuir aporte proporcionalmente
@@ -101,5 +104,5 @@ if aporte > 0:
         st.dataframe(df_comprar[["Produto", "Diferenca", "AporteRecomendado"]], use_container_width=True)
     else:
         st.write("Todos os ativos estão na alocação ideal. Nenhum aporte necessário.")
-else:
-    st.write("Informe o valor do aporte para calcular a recomendação.")
+
+
