@@ -80,8 +80,13 @@ df["ValorAtual"] = df["ValorAtual"].apply(lambda x: f"R${x:,.2f}" if x is not No
 st.subheader("Carteira Atual vs Alocação Ideal")
 st.dataframe(df[["Produto", "ValorAplicado", "SaldoBruto", "ParticipacaoAtual", "ParticipacaoIdeal", "Diferenca", "Status", "ValorAtual"]])
 
-# Caixa de entrada para aporte
-aporte = st.number_input("Qual o valor do aporte?", min_value=0.0, step=0.01, format="%.2f")
+# Caixa de entrada para aporte (mais flexível que number_input)
+aporte_str = st.text_input("Qual o valor do aporte?", "0.00")
+
+try:
+    aporte = float(aporte_str.replace(",", "."))
+except ValueError:
+    aporte = 0.0
 
 if aporte > 0:
     # Considerar apenas ativos para comprar mais
