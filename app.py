@@ -32,7 +32,7 @@ df_carteira["Valor aplicado"] = (
 )
 df_carteira["Valor aplicado"] = pd.to_numeric(df_carteira["Valor aplicado"], errors="coerce")
 
-# Limpar e converter a coluna "Saldo bruto" da mesma forma
+# Limpar e converter a coluna "Saldo bruto"
 df_carteira["Saldo bruto"] = (
     df_carteira["Saldo bruto"]
     .astype(str)
@@ -43,7 +43,7 @@ df_carteira["Saldo bruto"] = (
 )
 df_carteira["Saldo bruto"] = pd.to_numeric(df_carteira["Saldo bruto"], errors="coerce")
 
-# Converter outras colunas numéricas
+# Converter outras colunas numéricas da Carteira
 numericas = ["Rentabilidade (%)", "Participação na carteira (%)"]
 for col in numericas:
     df_carteira[col] = pd.to_numeric(
@@ -51,10 +51,18 @@ for col in numericas:
         errors="coerce"
     )
 
-df_alocacao["PercentualIdeal"] = pd.to_numeric(
-    df_alocacao["PercentualIdeal"].astype(str).str.replace(",", ".").str.strip(),
-    errors="coerce"
+# Limpar e converter a coluna "PercentualIdeal" da Alocacao
+df_alocacao["PercentualIdeal"] = (
+    df_alocacao["PercentualIdeal"]
+    .astype(str)
+    .str.replace("%", "", regex=False)
+    .str.replace(",", ".", regex=False)
+    .str.strip()
 )
+df_alocacao["PercentualIdeal"] = pd.to_numeric(df_alocacao["PercentualIdeal"], errors="coerce")
+
+# Renomear coluna para padronização
+df_alocacao.rename(columns={"PercentualIdeal": "ParticipacaoIdeal", "Ativo": "Produto"}, inplace=True)
 
 # Agrupar Carteira por Produto, mantendo Valor Aplicado e Saldo Bruto originais
 df_carteira = df_carteira.groupby("Produto", as_index=False).agg({
@@ -64,14 +72,13 @@ df_carteira = df_carteira.groupby("Produto", as_index=False).agg({
     "Participação na carteira (%)": "sum"
 })
 
-# Renomear colunas
+# Renomear colunas da Carteira
 df_carteira.rename(columns={
     "Valor aplicado": "ValorAplicado",
     "Saldo bruto": "SaldoBruto",
     "Rentabilidade (%)": "Rentabilidade",
     "Participação na carteira (%)": "ParticipacaoAtual"
 }, inplace=True)
-df_alocacao.rename(columns={"PercentualIdeal": "ParticipacaoIdeal", "Ativo": "Produto"}, inplace=True)
 
 # Merge Carteira + Alocacao
 df = pd.merge(df_carteira, df_alocacao, on="Produto", how="left")
@@ -114,7 +121,7 @@ df["ParticipacaoIdeal"] = df["ParticipacaoIdeal"].map(lambda x: f"{x:.2f}%" if p
 # Exibir tabela principal
 st.subheader("Carteira Atual vs Alocação Ideal")
 
-# Renomear colunas para exibição
+# Renomear colunas para exibição final
 df_exibir = df.rename(columns={
     "ValorAplicado": "Valor Aplicado",
     "SaldoBruto": "Saldo Bruto",
