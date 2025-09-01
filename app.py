@@ -130,13 +130,18 @@ ticker_map = {
 
 df["TickerYF"] = df["Produto"].map(ticker_map)
 
-# Buscar valor atual
+# Buscar valor atual com fallback
 def get_valor_atual(ticker):
     if pd.isna(ticker):
         return None
     try:
-        return yf.Ticker(ticker).history(period="1d")["Close"].iloc[-1]
-    except:
+        ticker_obj = yf.Ticker(ticker)
+        hist = ticker_obj.history(period="5d")
+        if not hist.empty:
+            return hist["Close"].iloc[-1]
+        else:
+            return ticker_obj.fast_info.get("last_price", None)
+    except Exception:
         return None
 
 df["ValorAtual"] = df["TickerYF"].apply(get_valor_atual)
