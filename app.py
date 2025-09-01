@@ -21,9 +21,9 @@ except Exception as e:
 df_carteira.columns = df_carteira.columns.str.strip()
 df_alocacao.columns = df_alocacao.columns.str.strip()
 
-# Padronizar nomes de ativos
-df_carteira["Produto"] = df_carteira["Produto"].str.strip().str.upper()
-df_alocacao["Ativo"] = df_alocacao["Ativo"].str.strip().str.upper()
+# Extrair apenas o ticker (parte antes do "-") e padronizar
+df_carteira["Produto"] = df_carteira["Produto"].str.split("-").str[0].str.strip().str.upper()
+df_alocacao["Ativo"] = df_alocacao["Ativo"].str.split("-").str[0].str.strip().str.upper()
 
 # Converter colunas monetárias
 for col in ["Valor aplicado", "Saldo bruto"]:
@@ -130,15 +130,24 @@ ticker_map = {
 
 df["TickerYF"] = df["Produto"].map(ticker_map)
 
-# Buscar valor atual
+# ==============================
+# Função para buscar valor atual atualizado
+# ==============================
 def get_valor_atual(ticker):
     if pd.isna(ticker):
         return None
     try:
-        return yf.Ticker(ticker).history(period="1d")["Close"].iloc[-1]
-    except:
+        ticker_obj = yf.Ticker(ticker)
+        hist = ticker_obj.history(period="5d")
+        if not hist.empty:
+            return hist["Close"].iloc[-1]
+        else:
+            return ticker_obj.fast_info.get("last_price", None)
+    except Exception as e:
+        print(f"[ERRO] {ticker}: {e}")
         return None
 
+# Aplicar ValorAtual
 df["ValorAtual"] = df["TickerYF"].apply(get_valor_atual)
 df["ValorAtual"] = df["ValorAtual"].map(lambda x: f"R${x:,.2f}" if pd.notna(x) else "N/A")
 
