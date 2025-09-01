@@ -118,7 +118,6 @@ ticker_map = {
     "SNAG11": "SNAG11.SA",
     "SOXX": "SOXX",
     "TAEE11": "TAEE11.SA",
-    "TAEE4": "TAEE4.SA",
     "VILG11": "VILG11.SA",
     "VNQ": "VNQ",
     "VOO": "VOO",
@@ -157,6 +156,25 @@ df["SaldoBruto"] = df["SaldoBruto"].fillna(0).map(lambda x: f"R${x:,.2f}")
 df["ParticipacaoAtual"] = df["ParticipacaoAtual"].map(lambda x: f"{x:.2f}%" if pd.notna(x) else "N/A")
 df["ParticipacaoIdeal"] = df["ParticipacaoIdeal"].map(lambda x: f"{x:.2f}%" if pd.notna(x) else "N/A")
 
+# ==============================
+# Calcular Desconto
+# ==============================
+def calcular_desconto(row):
+    try:
+        valor_atual = float(str(row["ValorAtual"]).replace("R$", "").replace(",", "").replace("N/A", "0"))
+        saldo_bruto = float(str(row["SaldoBruto"]).replace("R$", "").replace(",", ""))
+        if valor_atual > 0 and saldo_bruto > 0:
+            qtde = saldo_bruto / valor_atual
+            desconto = (saldo_bruto - qtde * valor_atual) / saldo_bruto * 100
+            return desconto
+        else:
+            return 0
+    except:
+        return 0
+
+df["Desconto (%)"] = df.apply(calcular_desconto, axis=1)
+df["Desconto (%)"] = df["Desconto (%)"].map(lambda x: f"{x:.2f}%")
+
 # Exibir tabela principal
 st.subheader("Carteira Atual vs Alocação Ideal")
 df_exibir = df.rename(columns={
@@ -167,17 +185,27 @@ df_exibir = df.rename(columns={
 })
 st.dataframe(df_exibir[["Produto", "Valor Aplicado", "Saldo Bruto",
                         "Participação Atual", "Participação Ideal",
-                        "Diferenca", "Status", "ValorAtual"]])
+                        "Diferenca", "Status", "ValorAtual", "Desconto (%)"]])
 
-# Caixa de entrada para aporte
+# ==============================
+# Ativos "Comprar mais" mais descontados
+# ==============================
+df_comprar = df[df["Status"].str.contains("Comprar mais")].copy()
+df_comprar = df_comprar.sort_values(by="Desconto (%)", ascending=False)
+
+st.subheader("Ativos Comprar Mais – Mais Descontados")
+st.dataframe(df_comprar[["Produto", "ValorAtual", "SaldoBruto", "Desconto (%)", "Diferenca", "Status"]])
+
+# ==============================
+# Recomendação de aporte
+# ==============================
 aporte_str = st.text_input("Qual o valor do aporte?", "0.00")
 try:
     aporte = float(aporte_str.replace(",", "."))
 except ValueError:
     aporte = 0.0
 
-if aporte > 0:
-    df_comprar = df[df["Status"].str.contains("Comprar mais")].copy()
+if aporte > 0 and not df_comprar.empty:
     total_diff = df_comprar["Diferenca"].sum()
     if total_diff > 0:
         df_comprar["Aporte Recomendado"] = (df_comprar["Diferenca"] / total_diff) * aporte
@@ -185,7 +213,5 @@ if aporte > 0:
         df_comprar["Aporte Recomendado"] = 0
 
     df_comprar["Aporte Recomendado"] = df_comprar["Aporte Recomendado"].map("R${:,.2f}".format)
-    df_comprar.sort_values("Diferenca", ascending=False, inplace=True)
-
     st.subheader("Recomendações de Aporte")
-    st.dataframe(df_comprar[["Produto", "ValorAtual", "Aporte Recomendado", "Diferenca"]])
+    st.dataframe(df_comprar[["Produto", "ValorAtual", "Aporte Recomendado", "Diferenca", "Desconto (%)"]])
