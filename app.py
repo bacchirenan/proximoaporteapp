@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import yfinance as yf
-import matplotlib.pyplot as plt
 
 st.set_page_config(page_title="Gestão de Carteira", layout="wide")
 st.title("Gestão de Carteira")
@@ -22,7 +21,7 @@ except Exception as e:
 df_carteira.columns = df_carteira.columns.str.strip()
 df_alocacao.columns = df_alocacao.columns.str.strip()
 
-# Extrair apenas o ticker
+# Extrair apenas o ticker (parte antes do "-") e padronizar
 df_carteira["Produto"] = df_carteira["Produto"].str.split("-").str[0].str.strip().str.upper()
 df_alocacao["Ativo"] = df_alocacao["Ativo"].str.split("-").str[0].str.strip().str.upper()
 
@@ -74,7 +73,7 @@ df = df[~df["Produto"].isin(ativos_excluir)]
 # Calcular diferença
 df["Diferenca"] = df["ParticipacaoIdeal"] - df["ParticipacaoAtual"]
 
-# Status
+# Status com bolinhas
 def status(row):
     if pd.isna(row["Diferenca"]):
         return "—"
@@ -87,7 +86,7 @@ def status(row):
 
 df["Status"] = df.apply(status, axis=1)
 
-# Map tickers
+# Mapeamento completo de tickers para yfinance
 ticker_map = {
     "AAPL": "AAPL",
     "BBDC3": "BBDC3.SA",
@@ -127,9 +126,12 @@ ticker_map = {
     "XPLG11": "XPLG11.SA",
     "XPML11": "XPML11.SA"
 }
+
 df["TickerYF"] = df["Produto"].map(ticker_map)
 
-# Valor Atual
+# ==============================
+# Função para buscar valor atual atualizado
+# ==============================
 def get_valor_atual(ticker):
     if pd.isna(ticker):
         return None
@@ -144,16 +146,19 @@ def get_valor_atual(ticker):
         print(f"[ERRO] {ticker}: {e}")
         return None
 
+# Aplicar ValorAtual
 df["ValorAtual"] = df["TickerYF"].apply(get_valor_atual)
 df["ValorAtual"] = df["ValorAtual"].map(lambda x: f"R${x:,.2f}" if pd.notna(x) else "N/A")
 
-# Formatação
+# Formatar valores e participações
 df["ValorAplicado"] = df["ValorAplicado"].fillna(0).map(lambda x: f"R${x:,.2f}")
 df["SaldoBruto"] = df["SaldoBruto"].fillna(0).map(lambda x: f"R${x:,.2f}")
 df["ParticipacaoAtual"] = df["ParticipacaoAtual"].map(lambda x: f"{x:.2f}%" if pd.notna(x) else "N/A")
 df["ParticipacaoIdeal"] = df["ParticipacaoIdeal"].map(lambda x: f"{x:.2f}%" if pd.notna(x) else "N/A")
 
-# Desconto
+# ==============================
+# Calcular Desconto
+# ==============================
 def calcular_desconto(row):
     try:
         valor_atual = float(str(row["ValorAtual"]).replace("R$", "").replace(",", "").replace("N/A", "0"))
@@ -171,7 +176,7 @@ df["Desconto (%)"] = df.apply(calcular_desconto, axis=1)
 df["Desconto (%)"] = df["Desconto (%)"].map(lambda x: f"{x:.2f}%")
 
 # ==============================
-# Exibir tabelas e gráficos
+# Exibir tabelas separadas
 # ==============================
 df_exibir = df.rename(columns={
     "ValorAplicado": "Valor Aplicado",
@@ -179,18 +184,6 @@ df_exibir = df.rename(columns={
     "ParticipacaoAtual": "Participação Atual",
     "ParticipacaoIdeal": "Participação Ideal"
 })
-
-def plot_pizza(df_plot, titulo):
-    fig, ax = plt.subplots(1, 2, figsize=(10, 4))
-    # Atual
-    df_plot["Participação Atual Num"] = df_plot["Participação Atual"].str.replace("%", "").astype(float)
-    ax[0].pie(df_plot["Participação Atual Num"], labels=df_plot["Produto"], autopct="%1.1f%%")
-    ax[0].set_title("Atual")
-    # Ideal
-    df_plot["Participação Ideal Num"] = df_plot["Participação Ideal"].str.replace("%", "").astype(float)
-    ax[1].pie(df_plot["Participação Ideal Num"], labels=df_plot["Produto"], autopct="%1.1f%%")
-    ax[1].set_title("Ideal")
-    st.pyplot(fig)
 
 # --- Ações nacionais ---
 df_acoes = df_exibir[df_exibir["TickerYF"].str.endswith(".SA", na=False)]
@@ -200,8 +193,6 @@ st.subheader("Carteira Atual vs Alocação Ideal – Ações Nacionais")
 st.dataframe(df_acoes[["Produto", "Valor Aplicado", "Saldo Bruto",
                        "Participação Atual", "Participação Ideal",
                        "Diferenca", "Status", "ValorAtual", "Desconto (%)"]])
-if not df_acoes.empty:
-    plot_pizza(df_acoes, "Ações Nacionais")
 
 # --- Fundos imobiliários ---
 df_fiis = df_exibir[df_exibir["Produto"].str.endswith("11")]
@@ -210,8 +201,6 @@ st.subheader("Carteira Atual vs Alocação Ideal – Fundos Imobiliários")
 st.dataframe(df_fiis[["Produto", "Valor Aplicado", "Saldo Bruto",
                       "Participação Atual", "Participação Ideal",
                       "Diferenca", "Status", "ValorAtual", "Desconto (%)"]])
-if not df_fiis.empty:
-    plot_pizza(df_fiis, "Fundos Imobiliários")
 
 # --- Ativos americanos ---
 df_usa = df_exibir[~df_exibir["TickerYF"].str.endswith(".SA", na=False)]
@@ -220,8 +209,6 @@ st.subheader("Carteira Atual vs Alocação Ideal – Ativos Americanos")
 st.dataframe(df_usa[["Produto", "Valor Aplicado", "Saldo Bruto",
                      "Participação Atual", "Participação Ideal",
                      "Diferenca", "Status", "ValorAtual", "Desconto (%)"]])
-if not df_usa.empty:
-    plot_pizza(df_usa, "Ativos Americanos")
 
 # ==============================
 # Ativos "Comprar mais" mais descontados
