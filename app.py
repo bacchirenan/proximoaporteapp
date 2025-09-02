@@ -129,9 +129,7 @@ ticker_map = {
 
 df["TickerYF"] = df["Produto"].map(ticker_map)
 
-# ==============================
 # Função para buscar valor atual atualizado
-# ==============================
 def get_valor_atual(ticker):
     if pd.isna(ticker):
         return None
@@ -146,6 +144,7 @@ def get_valor_atual(ticker):
         print(f"[ERRO] {ticker}: {e}")
         return None
 
+# Aplicar ValorAtual
 df["ValorAtual"] = df["TickerYF"].apply(get_valor_atual)
 df["ValorAtual"] = df["ValorAtual"].map(lambda x: f"R${x:,.2f}" if pd.notna(x) else "N/A")
 
@@ -155,9 +154,7 @@ df["SaldoBruto"] = df["SaldoBruto"].fillna(0).map(lambda x: f"R${x:,.2f}")
 df["ParticipacaoAtual"] = df["ParticipacaoAtual"].map(lambda x: f"{x:.2f}%" if pd.notna(x) else "N/A")
 df["ParticipacaoIdeal"] = df["ParticipacaoIdeal"].map(lambda x: f"{x:.2f}%" if pd.notna(x) else "N/A")
 
-# ==============================
 # Calcular Desconto
-# ==============================
 def calcular_desconto(row):
     try:
         valor_atual = float(str(row["ValorAtual"]).replace("R$", "").replace(",", "").replace("N/A", "0"))
@@ -174,9 +171,7 @@ def calcular_desconto(row):
 df["Desconto (%)"] = df.apply(calcular_desconto, axis=1)
 df["Desconto (%)"] = df["Desconto (%)"].map(lambda x: f"{x:.2f}%")
 
-# ==============================
 # Exibir tabelas iniciais
-# ==============================
 df_exibir = df.rename(columns={
     "ValorAplicado": "Valor Aplicado",
     "SaldoBruto": "Saldo Bruto",
@@ -206,9 +201,7 @@ st.dataframe(df_usa[["Produto", "Valor Aplicado", "Saldo Bruto",
                      "Participação Atual", "Participação Ideal",
                      "Diferenca", "Status", "ValorAtual", "Desconto (%)"]])
 
-# ==============================
 # Recomendação de aporte
-# ==============================
 aporte_str = st.text_input("Qual o valor do aporte?", "0.00")
 processar = st.button("Processar aporte")
 
@@ -225,4 +218,17 @@ if processar:
         def preco_medio(row):
             try:
                 saldo_bruto = float(str(row["SaldoBruto"]).replace("R$", "").replace(",", ""))
-                valor_atual = float(str(row["ValorAtual"]).replace("R$", "").replace(",",
+                valor_atual = float(str(row["ValorAtual"]).replace("R$", "").replace(",", ""))
+                if valor_atual > 0:
+                    return saldo_bruto / valor_atual
+                else:
+                    return float('inf')
+            except:
+                return float('inf')
+
+        df_comprar["PrecoMedioPago"] = df_comprar.apply(preco_medio, axis=1)
+
+        # Aporte proporcional
+        if aporte > 0:
+            total_diff = df_comprar["Diferenca"].sum()
+            if total_diff > 0
