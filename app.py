@@ -154,22 +154,21 @@ df["SaldoBruto"] = df["SaldoBruto"].fillna(0).map(lambda x: f"R${x:,.2f}")
 df["ParticipacaoAtual"] = df["ParticipacaoAtual"].map(lambda x: f"{x:.2f}%" if pd.notna(x) else "N/A")
 df["ParticipacaoIdeal"] = df["ParticipacaoIdeal"].map(lambda x: f"{x:.2f}%" if pd.notna(x) else "N/A")
 
-# Calcular Desconto
-def calcular_desconto(row):
+# Calcular Preço Médio
+def calcular_preco_medio(row):
     try:
         valor_atual = float(str(row["ValorAtual"]).replace("R$", "").replace(",", "").replace("N/A", "0"))
         saldo_bruto = float(str(row["SaldoBruto"]).replace("R$", "").replace(",", ""))
         if valor_atual > 0 and saldo_bruto > 0:
             qtde = saldo_bruto / valor_atual
-            desconto = (saldo_bruto - qtde * valor_atual) / saldo_bruto * 100
-            return desconto
-        else:
-            return 0
+            if qtde > 0:
+                return saldo_bruto / qtde
+        return 0
     except:
         return 0
 
-df["Desconto (%)"] = df.apply(calcular_desconto, axis=1)
-df["Desconto (%)"] = df["Desconto (%)"].map(lambda x: f"{x:.2f}%")
+df["Preço Médio"] = df.apply(calcular_preco_medio, axis=1)
+df["Preço Médio"] = df["Preço Médio"].map(lambda x: f"R${x:,.2f}" if x > 0 else "N/A")
 
 # Exibir tabelas iniciais
 df_exibir = df.rename(columns={
@@ -185,21 +184,21 @@ df_acoes = df_acoes[~df_acoes["Produto"].str.endswith("11")]
 st.subheader("Carteira Atual vs Alocação Ideal – Ações Nacionais")
 st.table(df_acoes[["Produto", "Valor Aplicado", "Saldo Bruto",
                    "Participação Atual", "Participação Ideal",
-                   "Diferenca", "Status", "ValorAtual", "Desconto (%)"]])
+                   "Diferenca", "Status", "ValorAtual", "Preço Médio"]])
 
 # --- Fundos imobiliários ---
 df_fiis = df_exibir[df_exibir["Produto"].str.endswith("11")]
 st.subheader("Carteira Atual vs Alocação Ideal – Fundos Imobiliários")
 st.table(df_fiis[["Produto", "Valor Aplicado", "Saldo Bruto",
                   "Participação Atual", "Participação Ideal",
-                  "Diferenca", "Status", "ValorAtual", "Desconto (%)"]])
+                  "Diferenca", "Status", "ValorAtual", "Preço Médio"]])
 
 # --- Ativos americanos ---
 df_usa = df_exibir[~df_exibir["TickerYF"].str.endswith(".SA", na=False)]
 st.subheader("Carteira Atual vs Alocação Ideal – Ativos Americanos")
 st.table(df_usa[["Produto", "Valor Aplicado", "Saldo Bruto",
                  "Participação Atual", "Participação Ideal",
-                 "Diferenca", "Status", "ValorAtual", "Desconto (%)"]])
+                 "Diferenca", "Status", "ValorAtual", "Preço Médio"]])
 
 # Recomendação de aporte
 aporte_str = st.text_input("Qual o valor do aporte?", "0.00")
@@ -247,10 +246,10 @@ if processar:
         df_rec_usa = df_comprar[~df_comprar["TickerYF"].str.endswith(".SA", na=False)]
 
         st.subheader("Recomendações de Aporte – Ações Nacionais")
-        st.table(df_rec_acoes[["Produto", "ValorAtual", "Aporte Recomendado", "Diferenca", "Desconto (%)"]])
+        st.table(df_rec_acoes[["Produto", "ValorAtual", "Aporte Recomendado", "Diferenca", "Preço Médio"]])
 
         st.subheader("Recomendações de Aporte – Fundos Imobiliários")
-        st.table(df_rec_fiis[["Produto", "ValorAtual", "Aporte Recomendado", "Diferenca", "Desconto (%)"]])
+        st.table(df_rec_fiis[["Produto", "ValorAtual", "Aporte Recomendado", "Diferenca", "Preço Médio"]])
 
         st.subheader("Recomendações de Aporte – Ativos Americanos")
-        st.table(df_rec_usa[["Produto", "ValorAtual", "Aporte Recomendado", "Diferenca", "Desconto (%)"]])
+        st.table(df_rec_usa[["Produto", "ValorAtual", "Aporte Recomendado", "Diferenca", "Preço Médio"]])
