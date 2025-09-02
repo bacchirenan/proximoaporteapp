@@ -228,7 +228,29 @@ if processar:
 
         df_comprar["PrecoMedioPago"] = df_comprar.apply(preco_medio, axis=1)
 
+        # Ordenar pelo mais barato primeiro
+        df_comprar = df_comprar.sort_values(by="PrecoMedioPago", ascending=True)
+
         # Aporte proporcional
         if aporte > 0:
             total_diff = df_comprar["Diferenca"].sum()
-            if total_diff > 0
+            if total_diff > 0:
+                df_comprar["Aporte Recomendado"] = (df_comprar["Diferenca"] / total_diff) * aporte
+            else:
+                df_comprar["Aporte Recomendado"] = 0
+
+            df_comprar["Aporte Recomendado"] = df_comprar["Aporte Recomendado"].map("R${:,.2f}".format)
+
+        # Dividir recomendações por tipo de ativo
+        df_rec_acoes = df_comprar[df_comprar["TickerYF"].str.endswith(".SA", na=False) & ~df_comprar["Produto"].str.endswith("11")]
+        df_rec_fiis = df_comprar[df_comprar["Produto"].str.endswith("11")]
+        df_rec_usa = df_comprar[~df_comprar["TickerYF"].str.endswith(".SA", na=False)]
+
+        st.subheader("Recomendações de Aporte – Ações Nacionais")
+        st.dataframe(df_rec_acoes[["Produto", "ValorAtual", "Aporte Recomendado", "Diferenca", "Desconto (%)"]])
+
+        st.subheader("Recomendações de Aporte – Fundos Imobiliários")
+        st.dataframe(df_rec_fiis[["Produto", "ValorAtual", "Aporte Recomendado", "Diferenca", "Desconto (%)"]])
+
+        st.subheader("Recomendações de Aporte – Ativos Americanos")
+        st.dataframe(df_rec_usa[["Produto", "ValorAtual", "Aporte Recomendado", "Diferenca", "Desconto (%)"]])
