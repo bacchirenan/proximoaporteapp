@@ -21,7 +21,7 @@ except Exception as e:
 df_carteira.columns = df_carteira.columns.str.strip()
 df_alocacao.columns = df_alocacao.columns.str.strip()
 
-# Extrair apenas o ticker (parte antes do "-") e padronizar
+# Extrair apenas o ticker e padronizar
 df_carteira["Produto"] = df_carteira["Produto"].str.split("-").str[0].str.strip().str.upper()
 df_alocacao["Ativo"] = df_alocacao["Ativo"].str.split("-").str[0].str.strip().str.upper()
 
@@ -48,6 +48,10 @@ df_alocacao["PercentualIdeal"] = pd.to_numeric(
 # Renomear colunas
 df_alocacao.rename(columns={"PercentualIdeal": "ParticipacaoIdeal", "Ativo": "Produto"}, inplace=True)
 
+# Padronizar strings antes do merge
+df_carteira["Produto"] = df_carteira["Produto"].str.strip().str.upper()
+df_alocacao["Produto"] = df_alocacao["Produto"].str.strip().str.upper()
+
 # Agrupar Carteira por Produto
 df_carteira = df_carteira.groupby("Produto", as_index=False).agg({
     "Valor aplicado": "first",
@@ -65,6 +69,9 @@ df_carteira.rename(columns={
 
 # Merge Carteira + Alocacao
 df = pd.merge(df_carteira, df_alocacao, on="Produto", how="left")
+
+# Preencher valores ausentes de ParticipacaoIdeal com 0
+df["ParticipacaoIdeal"] = df["ParticipacaoIdeal"].fillna(0)
 
 # FILTRO DEFINITIVO
 ativos_excluir = ["BRCR11", "BTHF11", "RBFF11", "RBRD11", "RECR11", "TAEE4"]
@@ -146,7 +153,6 @@ def get_valor_atual(ticker):
         print(f"[ERRO] {ticker}: {e}")
         return None
 
-# Aplicar ValorAtual
 df["ValorAtual"] = df["TickerYF"].apply(get_valor_atual)
 df["ValorAtual"] = df["ValorAtual"].map(lambda x: f"R${x:,.2f}" if pd.notna(x) else "N/A")
 
@@ -154,7 +160,7 @@ df["ValorAtual"] = df["ValorAtual"].map(lambda x: f"R${x:,.2f}" if pd.notna(x) e
 df["ValorAplicado"] = df["ValorAplicado"].fillna(0).map(lambda x: f"R${x:,.2f}")
 df["SaldoBruto"] = df["SaldoBruto"].fillna(0).map(lambda x: f"R${x:,.2f}")
 df["ParticipacaoAtual"] = df["ParticipacaoAtual"].map(lambda x: f"{x:.2f}%" if pd.notna(x) else "N/A")
-df["ParticipacaoIdeal"] = df["ParticipacaoIdeal"].map(lambda x: f"{x:.2f}%" if pd.notna(x) else "N/A")
+df["ParticipacaoIdeal"] = df["ParticipacaoIdeal"].map(lambda x: f"{x:.2f}%")
 
 # ==============================
 # Calcular Desconto
@@ -233,8 +239,4 @@ if aporte > 0 and not df_comprar.empty:
     if total_diff > 0:
         df_comprar["Aporte Recomendado"] = (df_comprar["Diferenca"] / total_diff) * aporte
     else:
-        df_comprar["Aporte Recomendado"] = 0
-
-    df_comprar["Aporte Recomendado"] = df_comprar["Aporte Recomendado"].map("R${:,.2f}".format)
-    st.subheader("Recomendações de Aporte")
-    st.dataframe(df_comprar[["Produto", "ValorAtual", "Aporte Recomendado", "Diferenca", "Desconto (%)"]])
+        df_comprar["Aporte Recomendado"]
