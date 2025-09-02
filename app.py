@@ -175,17 +175,40 @@ def calcular_desconto(row):
 df["Desconto (%)"] = df.apply(calcular_desconto, axis=1)
 df["Desconto (%)"] = df["Desconto (%)"].map(lambda x: f"{x:.2f}%")
 
-# Exibir tabela principal
-st.subheader("Carteira Atual vs Alocação Ideal")
+# ==============================
+# Exibir tabelas separadas
+# ==============================
 df_exibir = df.rename(columns={
     "ValorAplicado": "Valor Aplicado",
     "SaldoBruto": "Saldo Bruto",
     "ParticipacaoAtual": "Participação Atual",
     "ParticipacaoIdeal": "Participação Ideal"
 })
-st.dataframe(df_exibir[["Produto", "Valor Aplicado", "Saldo Bruto",
-                        "Participação Atual", "Participação Ideal",
-                        "Diferenca", "Status", "ValorAtual", "Desconto (%)"]])
+
+# --- Ações nacionais ---
+df_acoes = df_exibir[df_exibir["TickerYF"].str.endswith(".SA", na=False)]
+df_acoes = df_acoes[~df_acoes["Produto"].str.endswith("11")]
+
+st.subheader("Carteira Atual vs Alocação Ideal – Ações Nacionais")
+st.dataframe(df_acoes[["Produto", "Valor Aplicado", "Saldo Bruto",
+                       "Participação Atual", "Participação Ideal",
+                       "Diferenca", "Status", "ValorAtual", "Desconto (%)"]])
+
+# --- Fundos imobiliários ---
+df_fiis = df_exibir[df_exibir["Produto"].str.endswith("11")]
+
+st.subheader("Carteira Atual vs Alocação Ideal – Fundos Imobiliários")
+st.dataframe(df_fiis[["Produto", "Valor Aplicado", "Saldo Bruto",
+                      "Participação Atual", "Participação Ideal",
+                      "Diferenca", "Status", "ValorAtual", "Desconto (%)"]])
+
+# --- Ativos americanos ---
+df_usa = df_exibir[~df_exibir["TickerYF"].str.endswith(".SA", na=False)]
+
+st.subheader("Carteira Atual vs Alocação Ideal – Ativos Americanos")
+st.dataframe(df_usa[["Produto", "Valor Aplicado", "Saldo Bruto",
+                     "Participação Atual", "Participação Ideal",
+                     "Diferenca", "Status", "ValorAtual", "Desconto (%)"]])
 
 # ==============================
 # Ativos "Comprar mais" mais descontados
