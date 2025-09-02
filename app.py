@@ -183,23 +183,23 @@ df_exibir = df.rename(columns={
 df_acoes = df_exibir[df_exibir["TickerYF"].str.endswith(".SA", na=False)]
 df_acoes = df_acoes[~df_acoes["Produto"].str.endswith("11")]
 st.subheader("Carteira Atual vs Alocação Ideal – Ações Nacionais")
-st.dataframe(df_acoes[["Produto", "Valor Aplicado", "Saldo Bruto",
-                       "Participação Atual", "Participação Ideal",
-                       "Diferenca", "Status", "ValorAtual", "Desconto (%)"]])
+st.table(df_acoes[["Produto", "Valor Aplicado", "Saldo Bruto",
+                   "Participação Atual", "Participação Ideal",
+                   "Diferenca", "Status", "ValorAtual", "Desconto (%)"]])
 
 # --- Fundos imobiliários ---
 df_fiis = df_exibir[df_exibir["Produto"].str.endswith("11")]
 st.subheader("Carteira Atual vs Alocação Ideal – Fundos Imobiliários")
-st.dataframe(df_fiis[["Produto", "Valor Aplicado", "Saldo Bruto",
-                      "Participação Atual", "Participação Ideal",
-                      "Diferenca", "Status", "ValorAtual", "Desconto (%)"]])
+st.table(df_fiis[["Produto", "Valor Aplicado", "Saldo Bruto",
+                  "Participação Atual", "Participação Ideal",
+                  "Diferenca", "Status", "ValorAtual", "Desconto (%)"]])
 
 # --- Ativos americanos ---
 df_usa = df_exibir[~df_exibir["TickerYF"].str.endswith(".SA", na=False)]
 st.subheader("Carteira Atual vs Alocação Ideal – Ativos Americanos")
-st.dataframe(df_usa[["Produto", "Valor Aplicado", "Saldo Bruto",
-                     "Participação Atual", "Participação Ideal",
-                     "Diferenca", "Status", "ValorAtual", "Desconto (%)"]])
+st.table(df_usa[["Produto", "Valor Aplicado", "Saldo Bruto",
+                 "Participação Atual", "Participação Ideal",
+                 "Diferenca", "Status", "ValorAtual", "Desconto (%)"]])
 
 # Recomendação de aporte
 aporte_str = st.text_input("Qual o valor do aporte?", "0.00")
@@ -247,10 +247,10 @@ if processar:
         df_rec_usa = df_comprar[~df_comprar["TickerYF"].str.endswith(".SA", na=False)]
 
         st.subheader("Recomendações de Aporte – Ações Nacionais")
-        st.dataframe(df_rec_acoes[["Produto", "ValorAtual", "Aporte Recomendado", "Diferenca", "Desconto (%)"]])
+        st.table(df_rec_acoes[["Produto", "ValorAtual", "Aporte Recomendado", "Diferenca", "Desconto (%)"]])
 
         st.subheader("Recomendações de Aporte – Fundos Imobiliários")
-        st.dataframe(df_rec_fiis[["Produto", "ValorAtual", "Aporte Recomendado", "Diferenca", "Desconto (%)"]])
+        st.table(df_rec_fiis[["Produto", "ValorAtual", "Aporte Recomendado", "Diferenca", "Desconto (%)"]])
 
         st.subheader("Recomendações de Aporte – Ativos Americanos")
-        st.dataframe(df_rec_usa[["Produto", "ValorAtual", "Aporte Recomendado", "Diferenca", "Desconto (%)"]])
+        st.table(df_rec_usa[["Produto", "ValorAtual", "Aporte Recomendado", "Diferenca", "Desconto (%)"]])
